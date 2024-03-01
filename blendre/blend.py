@@ -10,14 +10,15 @@ os.chdir(PROJECT_DIR)
 
 def render_object_from_angles(obj, output_dir, matrix_file):
     with open(matrix_file, 'w') as f:
+        start_time = time.time()  
         for id, angle in enumerate(generate_uniform_angles(100)):
-            start_time = time.time()    
+              
             obj.rotation_euler = angle
             matrix = matrix2string(obj.matrix_world) 
             print(f'{id}\n{matrix}', file = f)
             bpy.context.scene.render.filepath = os.path.join(output_dir, f"{id}.png")
             bpy.ops.render.render(write_still=True)
-            print(f'{id} took {time.time() - start_time} seconds')
+        print(f'{id} took {time.time() - start_time} seconds')
 
 def matrix2string(matrix):
     return '\n'.join([' '.join(map(str, row[:-1])) for row in matrix[:-1]])   
@@ -32,7 +33,8 @@ def add_texture(ob):
     mat.use_nodes = True
     bsdf = mat.node_tree.nodes["Principled BSDF"]
     texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
-    texImage.image = bpy.data.images.load('gray_rocks_4k.blend/textures/gray_rocks_nor_gl_4k.exr')
+    texImage.image = bpy.data.images.load('textury/voronoi.png')
+#    texImage.image = bpy.data.images.load('textury/gray_rocks_4k.blend/textures/gray_rocks_nor_gl_4k.exr')
     mat.node_tree.links.new(bsdf.inputs['Base Color'], texImage.outputs['Color'])
     if ob.data.materials:
         ob.data.materials[0] = mat
@@ -48,8 +50,10 @@ def set_scene():
     bpy.context.scene.camera = bpy.context.object
 
 def import_object(file_path):
-    bpy.ops.import_scene.obj(filepath=file_path)
-    obj = bpy.context.selected_objects[0]
+    print(bpy.ops.import_scene.fbx(filepath='modely/test.fbx'))
+    bpy.ops.object.select_all(action='SELECT')
+#    bpy.ops.import_scene.obj(filepath=file_path)
+    obj = bpy.context.selected_objects[2]
     return obj
 
 def set_rendering_settings(x, y):
@@ -66,6 +70,7 @@ def generate():
     obj = import_object("modely/kocky_vstrede.obj")
     add_texture(obj)
     set_rendering_settings(400, 400)
+    
 
     render_object_from_angles(obj, "output", 'matice.txt')
 
