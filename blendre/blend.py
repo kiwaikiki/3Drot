@@ -50,7 +50,7 @@ def set_scene():
     bpy.context.scene.camera = bpy.context.object
 
 def import_object(file_path):
-    print(bpy.ops.import_scene.fbx(filepath='modely/test.fbx'))
+    print(bpy.ops.import_scene.fbx(filepath='modely/kocky_texture.fbx'))
     bpy.ops.object.select_all(action='SELECT')
 #    bpy.ops.import_scene.obj(filepath=file_path)
     obj = bpy.context.selected_objects[2]
