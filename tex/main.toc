@@ -1,0 +1,13 @@
+\babel@toc {nil}{}
+\contentsline {chapter}{Úvod}{1}{chapter*.8}%
+\contentsline {chapter}{\numberline {1}Jadro a členenie práce}{3}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Jadro práce podľa smernice}{3}{section.1.1}%
+\contentsline {subsection}{\numberline {1.1.1}Súčasný stav}{4}{subsection.1.1.1}%
+\contentsline {subsection}{\numberline {1.1.2}Cieľ práce}{4}{subsection.1.1.2}%
+\contentsline {subsection}{\numberline {1.1.3}Metodika práce a metódy skúmania}{4}{subsection.1.1.3}%
+\contentsline {subsection}{\numberline {1.1.4}Výsledky práce a diskusia}{4}{subsection.1.1.4}%
+\contentsline {chapter}{\numberline {2}LaTeX}{5}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Obrázky}{5}{section.2.1}%
+\contentsline {chapter}{Záver}{7}{chapter*.9}%
+\contentsline {chapter}{Príloha A}{9}{chapter*.10}%
+\contentsline {chapter}{Príloha B}{11}{chapter*.11}%
