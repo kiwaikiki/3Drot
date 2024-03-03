@@ -4,24 +4,42 @@ from bpy import context, data, ops
 import numpy as np
 from io import StringIO   # StringIO behaves like a file object
 import time
+import pandas as pd
 
 PROJECT_DIR = '/home/viki/FMFI/bc/blendre/'
 os.chdir(PROJECT_DIR)
 
-def render_object_from_angles(obj, output_dir, matrix_file):
+def render_object_from_angles(obj, output_dir, matrix_file, number_of_angles=100):
+
     with open(matrix_file, 'w') as f:
         start_time = time.time()  
-        for id, angle in enumerate(generate_uniform_angles(100)):
-              
+        for id, angle in enumerate(generate_uniform_angles(number_of_angles)):
             obj.rotation_euler = angle
-            matrix = matrix2string(obj.matrix_world) 
-            print(f'{id}\n{matrix}', file = f)
+            if matrix_file.endswith('.csv'):
+                matrix = matrix2csv(obj.matrix_world)
+                print(f'{id},{matrix}', file = f)
+            else:  
+                matrix = matrix2string(obj.matrix_world) 
+                print(f'{id}\n{matrix}', file = f)
             bpy.context.scene.render.filepath = os.path.join(output_dir, f"{id}.png")
             bpy.ops.render.render(write_still=True)
-        print(f'{id} took {time.time() - start_time} seconds')
+    
+        print(f'Elapsed time: {time.time() - start_time}')
 
 def matrix2string(matrix):
+    '''
+    returns string parsable by numpy. 
+    discards last row and column(translation).
+    '''
     return '\n'.join([' '.join(map(str, row[:-1])) for row in matrix[:-1]])   
+
+def matrix2csv(matrix):
+    '''
+    returns string parsable by numpy. 
+    discards last row and column(translation).
+    order first row, second row
+    '''
+    return ','.join([','.join(map(str, row[:-1])) for row in matrix[:-1]])
 
 def cleanup_scene():
     bpy.ops.object.select_all(action='SELECT')
@@ -29,6 +47,9 @@ def cleanup_scene():
     bpy.ops.object.select_all(action='DESELECT')
 
 def add_texture(ob):
+    '''
+    object should already have uv map
+    '''
     mat = bpy.data.materials.new(name="New_Mat")
     mat.use_nodes = True
     bsdf = mat.node_tree.nodes["Principled BSDF"]
@@ -42,6 +63,9 @@ def add_texture(ob):
         ob.data.materials.append(mat)
 
 def set_scene():
+    '''
+    add light and camera
+    '''
     bpy.ops.object.light_add(type='POINT', location=(5, -10, 5))
     light = bpy.context.object
     light.data.energy = 5000
@@ -51,9 +75,9 @@ def set_scene():
 
 def import_object(file_path):
     print(bpy.ops.import_scene.fbx(filepath='modely/kocky_texture.fbx'))
+    # bpy.ops.import_scene.obj(filepath=file_path)
     bpy.ops.object.select_all(action='SELECT')
-#    bpy.ops.import_scene.obj(filepath=file_path)
-    obj = bpy.context.selected_objects[2]
+    obj = bpy.context.selected_objects[2] # 0 is camera, 1 is light
     return obj
 
 def set_rendering_settings(x, y):
@@ -62,7 +86,12 @@ def set_rendering_settings(x, y):
 
 def generate_uniform_angles(n):
     for _ in range(n):
-        yield (np.random.uniform(0, 2*np.pi), np.random.uniform(0, 2*np.pi), np.random.uniform(0, 2*np.pi))
+        yield (np.random.uniform(0, 2*np.pi), 
+               np.random.uniform(0, 2*np.pi), 
+               np.random.uniform(0, 2*np.pi))
+
+def get_matrix_from_csv(id, table):
+    return np.array(table.loc[id]).reshape(3, 3)
 
 def generate():
     cleanup_scene()
@@ -70,12 +99,12 @@ def generate():
     obj = import_object("modely/kocky_vstrede.obj")
     add_texture(obj)
     set_rendering_settings(400, 400)
-    
+    render_object_from_angles(obj, "output", 'matice.csv', 10)
+    return obj
 
-    render_object_from_angles(obj, "output", 'matice.txt')
 
 if __name__ == "__main__":
-    generate()
+    obj = generate()
 
 # check
     with open('matice.txt', 'r') as f:
@@ -84,6 +113,14 @@ if __name__ == "__main__":
         M = np.loadtxt(c)
         print(np.linalg.det(M))
         print(M@M.T)
+    
+    with open('matice.csv', 'r') as f:
+        table = pd.read_csv(f, header=None, index_col=0)
+        M = get_matrix_from_csv(2, table)
+        print(M)
+        print(np.linalg.det(M))
+        print(M@M.T)
+        
 
 
 
