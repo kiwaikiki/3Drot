@@ -30,13 +30,18 @@ class Dataset(Dataset):
 
     def load_matrices(self, path):
         table = np.loadtxt(path, delimiter = ',')
+        # self.pic_id2index = {entry[0]: i for i, entry in enumerate(table)}
+        # self.index2pic_id = table[:, 0].astype(int) 
 
+        
         def help2matrix(x):
             return x[1:].reshape(3, 3)
-
+        # 
         adjusted_ids = table[:, 0].astype(int) - 1  # lebo csv offsetnute o jedna FIXME
         self.entries = dict(zip(adjusted_ids, np.apply_along_axis(help2matrix, arr = table, axis = 1)))
-
+        # print(self.entries)
+        # for i in self.entries:
+        #     print(np.linalg.det(i))
     
     def load_pictures(self):
         pictures = []
