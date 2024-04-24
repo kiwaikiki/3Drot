@@ -22,10 +22,11 @@ class LossCalculator:
         self.val_losses_y = []
 
         self.folder = 'results/'
-        self.just_ends_file = self.folder + 'GS_train_err_just_ends.out'
-        self.train_file = self.folder + 'GS_train_err.out'
-        self.val_file = self.folder + 'GS_val_err.out'
-        self.all_running = self.folder + 'GS_train_err_running.out'
+        self.just_ends_file = self.folder + 'GS_train_err_just_ends2.out'
+        self.train_file = self.folder + 'GS_train_err2.out'
+        self.val_file = self.folder + 'GS_val_err2.out'
+        self.all_running = self.folder + 'GS_train_err_running2.out'
+        
 
 
     def calculate_GS_train_loss(self, pred_z, pred_y, transform): 

@@ -37,8 +37,8 @@ class Dataset(Dataset):
         def help2matrix(x):
             return x[1:].reshape(3, 3)
         # 
-        adjusted_ids = table[:, 0].astype(int) - 1  # lebo csv offsetnute o jedna FIXME
-        self.entries = dict(zip(adjusted_ids, np.apply_along_axis(help2matrix, arr = table, axis = 1)))
+
+        self.entries = dict(zip(table[:, 0].astype(int), np.apply_along_axis(help2matrix, arr = table, axis = 1)))
         # print(self.entries)
         # for i in self.entries:
         #     print(np.linalg.det(i))
@@ -94,8 +94,8 @@ class Dataset(Dataset):
         # print(self.index2pic_id[index])
         # print(self.entries[self.index2pic_id[index]])
 
-        return {'index': index, 
-                'bin_transform': torch.from_numpy(self.entries[self.index2pic_id[index]]),
+        return {'index': self.index2pic_id[index], 
+                'transform': torch.from_numpy(self.entries[self.index2pic_id[index]]),
                 'pic' : pic}
 
     # def __getitem__(self, index): #fixme

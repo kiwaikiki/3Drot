@@ -67,7 +67,7 @@ def train(args):
             optimizer.zero_grad()
             
             # display_picture(sample['pic'][0].cpu().detach().numpy())
-            loss = loss_calculator.calculate_GS_train_loss(pred_z, pred_y, sample['bin_transform'].cuda())
+            loss = loss_calculator.calculate_GS_train_loss(pred_z, pred_y, sample['transform'].cuda())
 
             optimizer.zero_grad()
             loss.backward()
@@ -80,7 +80,7 @@ def train(args):
                 pred_z, pred_y = model(sample['pic'].cuda())
                 optimizer.zero_grad()
 
-                loss_calculator.calculate_GS_val_loss(pred_z, pred_y, sample['bin_transform'].cuda())
+                loss_calculator.calculate_GS_val_loss(pred_z, pred_y, sample['transform'].cuda())
 
             loss_calculator.print_results(e, args.epochs)
             loss_calculator.append_to_val_loss_all()
@@ -98,6 +98,8 @@ def train(args):
         # clean also cpu memory
           
     loss_calculator.save_results()
+    torch.save(model.state_dict(), 'checkpoints/final.pth')
+
 
 if __name__ == '__main__':
     """
