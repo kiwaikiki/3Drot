@@ -19,9 +19,9 @@ class Dataset(Dataset):
         self.load_matrices(path_csv)
         # self.load_pictures()
 
-
-        filt = (lambda x: x % 5 != 0) if self.split == 'train' else (lambda x: x % 5 == 0)
-        self.entries = {ind : mat for i, (ind, mat) in enumerate(self.entries.items()) if filt(i)}
+        filt = {'train': lambda x: x % 5 != 0, 'val': lambda x:  x % 10 == 0 , 'test': lambda x: x % 10 == 5}
+        # filt = (lambda x: x % 5 != 0) if self.split == 'train' else (lambda x: x % 5 == 0)
+        self.entries = {ind : mat for i, (ind, mat) in enumerate(self.entries.items()) if filt[self.split](i)}
         
         self.index2pic_id = np.array(list(self.entries.keys()))
 
@@ -65,9 +65,6 @@ class Dataset(Dataset):
         rgb = cv2.resize(rgb, (self.width, self.height))
         rgb = np.transpose(rgb, [2, 0, 1])
         rgb = rgb / 256
-        # /256
-        # refactor rgb
-        # rgb = self.add_sur_2(rgb)
         # TODO loadnut do pamate vsetky obrazky
         return rgb
     
@@ -113,7 +110,7 @@ class Dataset(Dataset):
 if __name__ == "__main__":
     pic_dir = '../blendre/output/'
     csv_dir = '../blendre/matice.csv'
-    dataset = Dataset(pic_dir, csv_dir)
+    dataset = Dataset(pic_dir, csv_dir, split = 'val')
     data_loader = DataLoader(dataset, batch_size=4, shuffle=True, num_workers=1)
 
 
