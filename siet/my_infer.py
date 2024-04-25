@@ -12,7 +12,9 @@ from shutil import copyfile
 
 
 def infer(args):
-    model = load_model(args).eval()
+    model = load_model(args)
+    model.load_state_dict(torch.load('checkpoints/final_gs_100_epoch.pth'))
+    model.eval()
 
     test_dataset = Dataset(args.path_pics, args.path_csv, 'test', args.input_width, args.input_height)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, num_workers=args.workers)

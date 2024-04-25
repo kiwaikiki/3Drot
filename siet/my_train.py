@@ -61,17 +61,18 @@ def train(args):
         print("Starting epoch: ", e)
 
         for sample in train_loader:
-            # print('memory:    ', torch.cuda.memory_allocated())
-            # print('cpu memory:', psutil.Process(os.getpid()).memory_info().rss)
-            pred_z, pred_y = model(sample['pic'].cuda())
-            optimizer.zero_grad()
-            
-            # display_picture(sample['pic'][0].cpu().detach().numpy())
-            loss = loss_calculator.calculate_GS_train_loss(pred_z, pred_y, sample['transform'].cuda())
+            with torch.autograd.set_detect_anomaly(True):
+                # print('memory:    ', torch.cuda.memory_allocated())
+                # print('cpu memory:', psutil.Process(os.getpid()).memory_info().rss)
+                pred_z, pred_y = model(sample['pic'].cuda())
+                optimizer.zero_grad()
+                
+                # display_picture(sample['pic'][0].cpu().detach().numpy())
+                loss = loss_calculator.get_angle_loss(pred_z, pred_y, sample['transform'].cuda())
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
         loss_calculator.append_to_train_loss_all()
         with torch.no_grad():
@@ -80,7 +81,7 @@ def train(args):
                 pred_z, pred_y = model(sample['pic'].cuda())
                 optimizer.zero_grad()
 
-                loss_calculator.calculate_GS_val_loss(pred_z, pred_y, sample['transform'].cuda())
+                loss_calculator.get_val_angle_loss(pred_z, pred_y, sample['transform'].cuda())
 
             loss_calculator.print_results(e, args.epochs)
             loss_calculator.append_to_val_loss_all()

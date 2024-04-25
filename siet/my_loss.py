@@ -27,10 +27,35 @@ class LossCalculator:
         self.val_file = self.folder + 'GS_val_err2.out'
         self.all_running = self.folder + 'GS_train_err_running2.out'
         
+    def get_angle_loss(self, pred_z, pred_y, true_transform):
+        z = pred_z
+        z = z / torch.linalg.norm(z)
+        
+        y = pred_y
+        # y = np.apply_along_axis(lambda x: x[1:] - np.dot(z[int(x[0])], x[1:])*z[int(x[0])], 1, np.concatenate([np.arange(len(y)).reshape(-1, 1), y], axis=1))
+        # y = y - torch.dot(z, y)*z
+        y = y - torch.sum(z * y, dim=-1, keepdim=True) * z
+        y = y / torch.linalg.norm(y)
+
+        x = torch.linalg.cross(y, z)
+
+        transform = torch.zeros([pred_y.shape[0], 3, 3])
+        transform[:, :3, 0] = x
+        transform[:, :3, 1] = y
+        transform[:, :3, 2] = z
+
+        # retype tue trans from double to float
+        true_transfrm = true_transform.float()
+        loss = calculate_eTE(true_transfrm, transform.cuda())
+        print(f'Loss: {loss}')
+        return loss
+    
+    def get_val_angle_loss(self, pred_z, pred_y, true_transform):
+        self.val_losses.append(self.get_angle_loss(pred_z, pred_y, true_transform).detach().item())
 
 
     def calculate_GS_train_loss(self, pred_z, pred_y, transform): 
-        loss_z = torch.mean(get_angles(pred_z,transform[:, :3, 2].cuda()))
+        loss_z = torch.mean(get_angles(pred_z, transform[:, :3, 2].cuda()))
         loss_y = torch.mean(get_angles(pred_y, transform[:, :3, 1].cuda()))
         loss = loss_z + loss_y  
 
@@ -106,3 +131,20 @@ def get_angles(pred, gt, sym_inv=False, eps=1e-7):
     else:
         angles = torch.acos(torch.clamp(dot/(eps + pred_norm * gt_norm), -1 + eps, 1 - eps))
     return angles
+
+
+def angle(x, y):
+    x = x.ravel()
+    y = y.ravel()
+    return torch.rad2deg(torch.arccos(torch.dot(x, y) / (torch.norm(x) * torch.norm(y))))
+
+def rotation_angle(R):
+    return torch.rad2deg(torch.arccos(torch.clip((torch.trace(R) - 1) / 2, -1, 1)))
+
+def calculate_eTE(R_gt, R_est):
+    # angles = np..apply_along_axis(lambda Rt, Re: rotation_angle(Rt.T @ Re), 1, R_gt, R_est)
+    angles = torch.stack([rotation_angle(R_gt[i].T @ R_est[i]) for i in range(len(R_gt))])
+    return torch.mean(angles).cuda()
+
+
+
