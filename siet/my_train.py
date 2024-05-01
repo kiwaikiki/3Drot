@@ -8,7 +8,7 @@ import gc
 
 from my_network import normalized_l2_loss,  load_model, parse_command_line
 from my_dataset import Dataset
-from my_loss import LossCalculator
+from my_loss import GSLossCalculator
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
@@ -46,8 +46,8 @@ def train(args):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
-    loss_calculator = LossCalculator('grammschmidt')
-    l1_loss = torch.nn.L1Loss()
+    loss_calculator = GSLossCalculator()
+    # l1_loss = torch.nn.L1Loss()
 
     start_epoch = 0 if args.resume is None else args.resume
 
@@ -68,7 +68,7 @@ def train(args):
                 optimizer.zero_grad()
                 
                 # display_picture(sample['pic'][0].cpu().detach().numpy())
-                loss = loss_calculator.get_angle_loss(pred_z, pred_y, sample['transform'].cuda())
+                loss = loss_calculator.calculate_angle_loss(pred_z, pred_y, sample['transform'].cuda())
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -80,8 +80,7 @@ def train(args):
             for sample in val_loader:
                 pred_z, pred_y = model(sample['pic'].cuda())
                 optimizer.zero_grad()
-
-                loss_calculator.get_val_angle_loss(pred_z, pred_y, sample['transform'].cuda())
+                loss_calculator.calculate_val_loss(pred_z, pred_y, sample['transform'].cuda())
 
             loss_calculator.print_results(e, args.epochs)
             loss_calculator.append_to_val_loss_all()
@@ -91,15 +90,25 @@ def train(args):
             with open('train_err.out', 'a') as f:
                 print("Saving checkpoint", file=f)
             print("Saving checkpoint")
-            if not os.path.isdir('checkpoints/'):
-                os.mkdir('checkpoints/')
-            torch.save(model.state_dict(), 'checkpoints/{:03d}.pth'.format(e))
+            # if not os.path.isdir(args.path_checkpoints):
+            #     os.mkdir(args.path_checkpoints)
+            torch.save(model.state_dict(), args.path_checkpoints + '{:03d}.pth'.format(e))
         
         torch.cuda.empty_cache()
         # clean also cpu memory
           
     loss_calculator.save_results()
     torch.save(model.state_dict(), 'checkpoints/final.pth')
+    # release memory
+    del model
+    del train_loader
+    del val_loader
+    del train_dataset
+    del val_dataset
+    del optimizer
+    del loss_calculator
+    gc.collect()
+    torch.cuda.empty_cache()
 
 
 if __name__ == '__main__':
@@ -116,6 +125,11 @@ if __name__ == '__main__':
     args.input_height = 256
     args.batch_size = 32
     args.workers = 4
+    args.dump_every = 10
+    args.repr = 'GS'
+    args.loss_type = 'angle'
+    args.path_checkpoints = f'checkpoints/{args.repr}/{args.loss_type}/'
+
     args.epochs = 100
 
     train(args)

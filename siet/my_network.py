@@ -21,9 +21,9 @@ def normalized_l2_loss(pred, gt, reduce=True):
 
 
 
-class Network(torch.nn.Module):
+class Network_GS(torch.nn.Module):
     def __init__(self, backbone='resnet18'):
-        super(Network, self).__init__()
+        super(Network_GS, self).__init__()
 
         
         pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
@@ -68,6 +68,40 @@ class Network(torch.nn.Module):
 
         return z, y
 
+class Network_Euler(torch.nn.Module):
+    def __init__(self, backbone='resnet18'):
+        super(Network_Euler, self).__init__()
+
+        
+        pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
+    
+        last_feat = list(pretrained_backbone_model.children())[-1].in_features // 2
+
+        self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
+
+        
+        self.angles = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(128, 64),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(64, 3))
+
+    def forward(self, x):
+        # x = self.init_conv(x)
+        x = self.backbone(x)
+
+        # Global Avg Pool
+        x = torch.mean(x, -1)
+        x = torch.mean(x, -1)
+
+        # Max pooling
+        # x = torch.max(x, -1)[0]
+        # x = torch.max(x, -1)[0]
+
+        angles = self.angles(x)
+
+        return angles
+
 
 def parse_command_line():
     """ Parser used for training and inference returns args. Sets up GPUs."""
@@ -100,7 +134,13 @@ def load_model(args):
     Loads model. If args.resum is None weights for the backbone are pre-trained on ImageNet, otherwise previous
     checkpoint is loaded
     """
-    model = Network(backbone=args.backbone).cuda()
+    which_repr = {
+        'GS': Network_GS,
+        'Euler': Network_Euler
+    }
+    repr_network = which_repr[args.repr] 
+    model = repr_network(backbone=args.backbone).cuda()
+    # model = Network_Euler(backbone=args.backbone).cuda()
     # if args.resume is not None:
     #     sd_path = 'checkpoints/{:03d}.pth'.format(args.resume)
     #     print("Resuming from: ", sd_path)

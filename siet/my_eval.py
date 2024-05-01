@@ -26,23 +26,21 @@ def evaluate(truth, pred):
     counter_worse = 0
 
     for row in pred_matrices:
-        print(row)
-        print(true_matrices[int(row[0])])
+        # print(row)
+        # print(true_matrices[int(row[0])])
         index = int(row[0])
-        print(f'Index: {index}')
+        # print(f'Index: {index}')
         R_gt = true_matrices[index][1:].reshape(3, 3)
-        print(f'GT: {R_gt}')
+        # print(f'GT: {R_gt}')
         R_est = row[1:].reshape(3, 3)
-        print(f'EST: {R_est}')
+        # print(f'EST: {R_est}')
         err = calculate_eTE(R_gt, R_est)
-        print(f'eTE: {err}')
+        # print(f'eTE: {err}')
         eTE_list.append(err)
         if err > 10:
             counter_worse += 1
         else:
             counter_better += 1
-
-
 
 
     print(len(eTE_list))
@@ -73,5 +71,25 @@ if __name__ == '__main__':
     Example usage: python evaluate.py path/to/dataset_with_predictions
     """
     truth = '../blendre/matice.csv'
-    pred = 'infer_results.csv'
-    evaluate(truth, pred)
+    path = 'GS/angle/'
+
+    with open(f'results/by_epochs.csv', 'w') as f:
+            pass
+    
+    for i in range(0, 101, 10):
+        pred = f'inferences/{path}infer_results{i:03d}.csv'
+        # print(pred)
+        if not os.path.exists(pred):
+            print(f'Path {pred} does not exist')
+            break
+
+        eTE_list = evaluate(truth, pred)
+
+        with open(f'results/by_epochs.csv', 'a') as f:
+            print(f'{i},{np.mean(eTE_list)},{np.median(eTE_list)},{np.max(eTE_list)},{np.min(eTE_list)},{np.std(eTE_list)},{np.percentile(eTE_list, 90)}', file=f)
+        # print(f'90th percentile eTE: {np.percentile(eTE_list, 90)}')
+        # print(f'Mean eTE: {np.mean(eTE_list)}')
+        # print(f'Median eTE: {np.median(eTE_list)}')
+        # print(f'Max eTE: {np.max(eTE_list)}')
+        # print(f'Min eTE: {np.min(eTE_list)}')
+        # print(f'Std eTE: {np.std(eTE_list)}')

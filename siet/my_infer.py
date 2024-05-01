@@ -5,15 +5,15 @@ import cv2
 import numpy as np
 from my_dataset import Dataset
 
-from my_network import Network, parse_command_line, load_model
-from scipy.spatial.transform.rotation import Rotation
+from my_network import parse_command_line, load_model, Network_GS
+from scipy.spatial.transform import Rotation
 from torch.utils.data import DataLoader
 from shutil import copyfile
 
 
 def infer(args):
     model = load_model(args)
-    model.load_state_dict(torch.load('checkpoints/final_gs_100_epoch.pth'))
+    model.load_state_dict(torch.load(args.path_checkpoint, map_location='cuda:0'))
     model.eval()
 
     test_dataset = Dataset(args.path_pics, args.path_csv, 'test', args.input_width, args.input_height)
@@ -22,7 +22,7 @@ def infer(args):
     np.set_printoptions(suppress=True)
 
     with torch.no_grad():
-        with open('infer_results.csv', 'w') as f:
+        with open(args.path_infer, 'w') as f:
             for sample in test_loader:
                 pred_zs, pred_ys = model(sample['pic'].cuda())
                 gt_transforms = sample['transform']
@@ -60,6 +60,8 @@ if __name__ == '__main__':
     Runs inference and writes prediction csv files.
     Example usage: python infer.py --no_preload -r 200 -iw 258 -ih 193 -b 32 /path/to/MLBinsDataset/EXR/dataset.json
     """
+    # import os
+    os.environ['CUDA_VISIBLE_DEVICES']='2'
     pic_dir = '../blendre/output/'
     csv_dir = '../blendre/matice.csv'
     args = parse_command_line()
@@ -69,5 +71,14 @@ if __name__ == '__main__':
     args.input_height = 256
     args.batch_size = 32
     args.workers = 4
+    args.repr = 'GS'
+    args.path = 'GS/angle/'
+    for i in range(0, 101, 10):
+        args.path_checkpoint = f'checkpoints/{args.path}{i:03d}.pth'
+        args.path_infer = f'inferences/{args.path}infer_results{i:03d}.csv'
+        print(args.path_checkpoint)
+        if not os.path.exists(args.path_checkpoint):
+            print(f'Path {args.path_checkpoint} does not exist')
+            break
 
-    infer(args)
+        infer(args)

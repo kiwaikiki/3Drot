@@ -38,3 +38,20 @@ text
 
 od rot k repr
 - zoz
+
+urobit nd tabulku s vysledkami vs kombinacie
+- obrazok ako 3 tabulky - rgb, alebo vektor 5-prvkovych aj so suradnicami
+- rozne vrstvy v teworku
+- rozne eprezentacie
+- rozne losses
+- max pooloing vs avg pooling
+
+
+ZRYCHLOVANIE
+- generovanie paralel obrazkov
+- kombinacie batch/numwork/....
+
+
+
+OTAZKY??
+preload??
