@@ -50,27 +50,19 @@ def angles2Rotation_Matrix(angles):
     Convert angles to a rotation matrix
     '''
     x, y, z = angles
-    Rx = torch.tensor([[1, 0, 0], [0, torch.cos(x), -torch.sin(x)], [0, torch.sin(x), torch.cos(x)]])
-    Ry = torch.tensor([[torch.cos(y), 0, torch.sin(y)], [0, 1, 0], [-torch.sin(y), 0, torch.cos(y)]])
-    Rz = torch.tensor([[torch.cos(z), -torch.sin(z), 0], [torch.sin(z), torch.cos(z), 0], [0, 0, 1]])
-    return Rz @ Ry @ Rx
+    Rx = torch.tensor([[1, 0, 0], [0, torch.cos(x), -torch.sin(x)], [0, torch.sin(x), torch.cos(x)]], requires_grad=True)
+    Ry = torch.tensor([[torch.cos(y), 0, torch.sin(y)], [0, 1, 0], [-torch.sin(y), 0, torch.cos(y)]], requires_grad=True)
+    Rz = torch.tensor([[torch.cos(z), -torch.sin(z), 0], [torch.sin(z), torch.cos(z), 0], [0, 0, 1]], requires_grad=True)
+    return torch.matmul(Rz, torch.matmul(Ry, Rx)).cuda()
 
 def angles2Rotation_Matrix_for_batches(angles):
     '''
-    Convert batch of angles to a rotation matrices
+    Convert batch of angles to rotation matrices
     '''
     # angles is a tensor of shape (batch_size, 3)
     x, y, z = angles[:, 0], angles[:, 1], angles[:, 2]
-    Rx = torch.stack([torch.stack([torch.ones_like(x), torch.zeros_like(x), torch.zeros_like(x)], dim=-1),
-                      torch.stack([torch.zeros_like(x), torch.cos(x), -torch.sin(x)], dim=-1),
-                      torch.stack([torch.zeros_like(x), torch.sin(x), torch.cos(x)], dim=-1)], dim=-1)
-    Ry = torch.stack([torch.stack([torch.cos(y), torch.zeros_like(y), torch.sin(y)], dim=-1),
-                      torch.stack([torch.zeros_like(y), torch.ones_like(y), torch.zeros_like(y)], dim=-1),
-                      torch.stack([-torch.sin(y), torch.zeros_like(y), torch.cos(y)], dim=-1)], dim=-1)
-    Rz = torch.stack([torch.stack([torch.cos(z), -torch.sin(z), torch.zeros_like(z)], dim=-1),
-                      torch.stack([torch.sin(z), torch.cos(z), torch.zeros_like(z)], dim=-1),
-                      torch.stack([torch.zeros_like(z), torch.zeros_like(z), torch.ones_like(z)], dim=-1)], dim=-1)
-    return torch.matmul(Rz, torch.matmul(Ry, Rx))
+    matrices = torch.stack([angles2Rotation_Matrix([x[i], y[i], z[i]]) for i in range(len(x))])
+    return matrices
 
 def rotation_Matrix2angles(R):
     '''
@@ -79,7 +71,29 @@ def rotation_Matrix2angles(R):
     x = torch.arctan2(R[2, 1], R[2, 2])
     y = torch.arctan2(-R[2, 0], torch.sqrt(R[2, 1]**2 + R[2, 2]**2))
     z = torch.arctan2(R[1, 0], R[0, 0])
-    return torch.tensor([x, y, z])
+    return torch.tensor([x, y, z], requires_grad=True).cuda()
+
+def GS_transform(preds):
+    '''
+    Calculate the transformation matrix from the predicted vectors
+    '''
+    pred_z, pred_y = preds
+    z = pred_z
+    z = z / torch.linalg.norm(z)
+    
+    y = pred_y
+    # y = y - torch.dot(z, y)*z
+    y = y - torch.sum(z * y, dim=-1, keepdim=True) * z
+    y = y / torch.linalg.norm(y)
+
+    x = torch.linalg.cross(y, z)
+
+    transform = torch.zeros([pred_y.shape[0], 3, 3])
+    transform[:, :3, 0] = x
+    transform[:, :3, 1] = y
+    transform[:, :3, 2] = z
+
+    return transform
 
 
 class LossCalculator:
@@ -106,9 +120,8 @@ class LossCalculator:
         self.train_loss_all.append(self.loss_running.detach().item())
 
     def append_to_val_loss_all(self):
-        self.val_loss_all.append(torch.mean(self.val_losses))
-
-    
+        self.val_loss_all.append(np.mean(self.val_losses))
+        
 
 class GSLossCalculator(LossCalculator):
     def __init__(self, loss_type='angle'):
@@ -124,30 +137,14 @@ class GSLossCalculator(LossCalculator):
                         'elements': (self.calculate_elements_train_loss,
                                     self.calculate_elements_val_loss)}
 
-        self.folder = 'results/GS'
-        self.train_file = self.folder + 'train_err2.out'
-        self.val_file = self.folder + 'val_err2.out'
+        self.folder = 'results/GS/' + loss_type + '/'
+        self.train_file = self.folder + 'train_err.out'
+        self.val_file = self.folder + 'val_err.out'
         # self.all_running = self.folder + 'train_err_running2.out'
         # self.just_ends_file = self.folder + 'train_err_just_ends2.out'
 
     def calculate_angle_loss(self, preds, true_transform):
-        pred_z, pred_y = preds
-        z = pred_z
-        z = z / torch.linalg.norm(z)
-        
-        y = pred_y
-        # y = y - torch.dot(z, y)*z
-        y = y - torch.sum(z * y, dim=-1, keepdim=True) * z
-        y = y / torch.linalg.norm(y)
-
-        x = torch.linalg.cross(y, z)
-
-        transform = torch.zeros([pred_y.shape[0], 3, 3])
-        transform[:, :3, 0] = x
-        transform[:, :3, 1] = y
-        transform[:, :3, 2] = z
-
-        # retype true trans from double to float
+        transform = GS_transform(preds)
         true_transfrm = true_transform.float()
         loss = torch.mean(calculate_eTE(true_transfrm, transform.cuda()))
 
@@ -236,7 +233,7 @@ class EulerLossCalculator(LossCalculator):
         pred_R = angles2Rotation_Matrix_for_batches(pred)
         true_transfrm = gt.float()
 
-        loss = torch.mean(calculate_eTE(true_transfrm, pred_R))
+        loss = torch.mean(calculate_eTE(true_transfrm, pred_R.cuda())).cuda()
         self.loss_running = 0.9 * self.loss_running + 0.1 * loss
 
         print(f'Running Loss: {self.loss_running.item()}')
@@ -249,15 +246,17 @@ class EulerLossCalculator(LossCalculator):
     def calculate_elements_loss(self, preds, true_transform):
         gt_angles = torch.stack([rotation_Matrix2angles(true_transform[i]) for i in range(len(true_transform))])
 
-        loss = torch.mean(get_angles(preds, gt_angles))
+        loss = torch.mean(torch.abs(preds - gt_angles)).cuda()
+
         self.loss_running = 0.9 * self.loss_running + 0.1 * loss
 
         print(f'Running Loss: {self.loss_running.item()}')
         return loss
     
     def calculate_val_elements_loss(self, preds, true_transform):
-        pass
-
+        loss = self.calculate_elements_loss(preds, true_transform)
+        self.val_losses.append(loss.detach().item())
+        
     
     def print_results(self, e, epochs):
         print(20 * "*")
@@ -269,3 +268,17 @@ class EulerLossCalculator(LossCalculator):
         np.set_printoptions(suppress=True)
         np.savetxt(self.train_file, self.train_loss_all, delimiter=',')
         np.savetxt(self.val_file, self.val_loss_all, delimiter=',')
+
+
+class QuaternionLossCalculator(LossCalculator):
+    def __init__(self, loss_type='angle'):
+        super().__init__(loss_type)
+
+        self.function_dict = {'angle': (self.calculate_angle_loss, 
+                                    self.calculate_val_angle_loss),
+                        'elements': (self.calculate_elements_loss,
+                                    self.calculate_val_elements_loss)}
+
+        self.folder = f'results/Quaternion/{loss_type}/'
+        self.train_file = self.folder + 'train_err.out'
+        self.val_file = self.folder + 'val_err.out'

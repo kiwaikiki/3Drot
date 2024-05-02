@@ -8,10 +8,10 @@ import gc
 
 from my_network import normalized_l2_loss,  load_model, parse_command_line
 from my_dataset import Dataset
-from my_loss import GSLossCalculator
+from my_loss import GSLossCalculator, EulerLossCalculator
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
-
+torch.autograd.set_detect_anomaly(True)
 gc.enable()
 
 soft, hard = resource.getrlimit(resource.RLIMIT_DATA)
@@ -29,7 +29,6 @@ print('Hard limit starts as  :', hard)
 
 # exit()
 
-
 def display_picture(pic):
     pic = np.transpose(pic, [1, 2, 0])
     plt.imshow(pic)
@@ -46,7 +45,7 @@ def train(args):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
-    loss_calculator = GSLossCalculator()
+    loss_calculator = EulerLossCalculator(args.loss_type) if args.repr == 'Euler' else GSLossCalculator(args.loss_type)
     # l1_loss = torch.nn.L1Loss()
 
     start_epoch = 0 if args.resume is None else args.resume
@@ -56,19 +55,20 @@ def train(args):
 
   
     for e in range(start_epoch, args.epochs):
-        with open('train_err.out', 'a') as f:
-            print("Starting epoch: ", e, file=f)
+        # with open('train_err.out', 'a') as f:
+        #     print("Starting epoch: ", e, file=f)
         print("Starting epoch: ", e)
 
         for sample in train_loader:
             with torch.autograd.set_detect_anomaly(True):
                 # print('memory:    ', torch.cuda.memory_allocated())
                 # print('cpu memory:', psutil.Process(os.getpid()).memory_info().rss)
-                pred_z, pred_y = model(sample['pic'].cuda())
+                preds = model(sample['pic'].cuda())
+
                 optimizer.zero_grad()
                 
                 # display_picture(sample['pic'][0].cpu().detach().numpy())
-                loss = loss_calculator.calculate_angle_loss(pred_z, pred_y, sample['transform'].cuda())
+                loss = loss_calculator.calculate_train_loss(preds, sample['transform'].cuda())
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -76,20 +76,21 @@ def train(args):
 
         loss_calculator.append_to_train_loss_all()
         with torch.no_grad():
-           
+            loss_calculator.reset_val_loss()
+
             for sample in val_loader:
-                pred_z, pred_y = model(sample['pic'].cuda())
+                preds = model(sample['pic'].cuda())
                 optimizer.zero_grad()
-                loss_calculator.calculate_val_loss(pred_z, pred_y, sample['transform'].cuda())
+                loss_calculator.calculate_val_loss(preds, sample['transform'].cuda())
 
             loss_calculator.print_results(e, args.epochs)
             loss_calculator.append_to_val_loss_all()
                 
 
         if args.dump_every != 0 and (e) % args.dump_every == 0:
-            with open('train_err.out', 'a') as f:
-                print("Saving checkpoint", file=f)
-            print("Saving checkpoint")
+            # with open('train_err.out', 'a') as f:
+            #     print("Saving checkpoint", file=f)
+            print("Saving checkpoint",  args.path_checkpoints + '{:03d}.pth'.format(e))
             # if not os.path.isdir(args.path_checkpoints):
             #     os.mkdir(args.path_checkpoints)
             torch.save(model.state_dict(), args.path_checkpoints + '{:03d}.pth'.format(e))
@@ -98,17 +99,10 @@ def train(args):
         # clean also cpu memory
           
     loss_calculator.save_results()
-    torch.save(model.state_dict(), 'checkpoints/final.pth')
+    torch.save(model.state_dict(), args.path_checkpoints + '{:03d}.pth'.format(e))
+
     # release memory
-    del model
-    del train_loader
-    del val_loader
-    del train_dataset
-    del val_dataset
-    del optimizer
-    del loss_calculator
-    gc.collect()
-    torch.cuda.empty_cache()
+
 
 
 if __name__ == '__main__':
@@ -123,8 +117,8 @@ if __name__ == '__main__':
     args.path_csv = csv_dir
     args.input_width = 256
     args.input_height = 256
-    args.batch_size = 32
-    args.workers = 4
+    args.batch_size = 64
+    args.workers = 8
     args.dump_every = 10
     args.repr = 'GS'
     args.loss_type = 'angle'

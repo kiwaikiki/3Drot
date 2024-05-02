@@ -1,6 +1,8 @@
 import numpy as np
 import argparse
 import os
+
+from my_loss import angles2Rotation_Matrix
 # import PrettyTable
 
 def angle(x, y):
@@ -71,9 +73,9 @@ if __name__ == '__main__':
     Example usage: python evaluate.py path/to/dataset_with_predictions
     """
     truth = '../blendre/matice.csv'
-    path = 'GS/angle/'
+    path = 'Euler/elements/'
 
-    with open(f'results/by_epochs.csv', 'w') as f:
+    with open(f'results/{path}test_err_by_epochs.csv', 'w') as f:
             pass
     
     for i in range(0, 101, 10):
@@ -85,7 +87,7 @@ if __name__ == '__main__':
 
         eTE_list = evaluate(truth, pred)
 
-        with open(f'results/by_epochs.csv', 'a') as f:
+        with open(f'results/{path}test_err_by_epochs.csv', 'a') as f:
             print(f'{i},{np.mean(eTE_list)},{np.median(eTE_list)},{np.max(eTE_list)},{np.min(eTE_list)},{np.std(eTE_list)},{np.percentile(eTE_list, 90)}', file=f)
         # print(f'90th percentile eTE: {np.percentile(eTE_list, 90)}')
         # print(f'Mean eTE: {np.mean(eTE_list)}')

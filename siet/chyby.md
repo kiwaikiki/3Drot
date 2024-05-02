@@ -10,12 +10,14 @@ my_infer/eval.py
 - nenacitala spravny model na infer (lebo som pouzivala ich stare args ktore nemali nieco spravne)
 
 my_loss.py
-- vsade v losse np. namiesto torch. - tam kde som chcel este pouzivat loss
+- vsade v losse np. namiesto torch. - tam kde som chcel este pouzivat loss -- potom sa tvarilo ze nema gradient a neda sa ratat
+- -ked vytvaramnovy tenzor, treba mu requires_grad=True a .cuda()
 - tam kde numpy - cpu.detach
 - =+ robi problemy (setting an array element with a sequence.. nejaky zly gradient potom) -> x = x + 5
 - v losse sa vyhodnocuje cely batch -> prerobit na velko vektorove operacie
 - ulozena matica bola double, ale vyrobena transform bol float -> pretypovat
-
+- nepremazavala som val_loss zoznamuy
+-
 
 
 

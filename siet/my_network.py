@@ -72,7 +72,7 @@ class Network_Euler(torch.nn.Module):
     def __init__(self, backbone='resnet18'):
         super(Network_Euler, self).__init__()
 
-        
+    
         pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
     
         last_feat = list(pretrained_backbone_model.children())[-1].in_features // 2
@@ -102,6 +102,39 @@ class Network_Euler(torch.nn.Module):
 
         return angles
 
+class Network_Quaternion(torch.nn.Module):
+    def __init__(self, backbone='resnet18'):
+        super(Network_Quaternion, self).__init__()
+
+    
+        pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
+    
+        last_feat = list(pretrained_backbone_model.children())[-1].in_features // 2
+
+        self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
+
+        
+        self.q = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(128, 64),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(64, 4))
+
+    def forward(self, x):
+        # x = self.init_conv(x)
+        x = self.backbone(x)
+
+        # Global Avg Pool
+        x = torch.mean(x, -1)
+        x = torch.mean(x, -1)
+
+        # Max pooling
+        # x = torch.max(x, -1)[0]
+        # x = torch.max(x, -1)[0]
+
+        q = self.q(x)
+
+        return q
 
 def parse_command_line():
     """ Parser used for training and inference returns args. Sets up GPUs."""

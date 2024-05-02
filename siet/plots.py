@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 
-def plot_losses(train, val, test, title):
+def plot_losses(path, train, val, test, title):
     with open(train, 'r') as f:
         train_lines = f.readlines()
         train_lines = [float(line.strip()) for line in train_lines]
@@ -18,10 +18,10 @@ def plot_losses(train, val, test, title):
     
     plt.title(title)
     plt.legend()
-    plt.savefig(f'{title}.png')
+    plt.savefig(f'{path}{title}.png')
     plt.show()
-    
-        
+
     
 if __name__ == "__main__":
-    plot_losses('results/GS_train_err.out', 'results/GS_val_err.out', 'results/by_epochs.csv', 'GS_train_val_test_err')
+    path = 'results/Euler/elements/'
+    plot_losses(path, f'{path}train_err.out', f'{path}val_err.out', f'{path}test_err_by_epochs.csv', 'Euler elements')

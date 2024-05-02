@@ -3,13 +3,13 @@ import os
 import torch
 import cv2
 import numpy as np
-from my_dataset import Dataset
 
+from my_loss import angles2Rotation_Matrix, GS_transform
+from my_dataset import Dataset
 from my_network import parse_command_line, load_model, Network_GS
 from scipy.spatial.transform import Rotation
 from torch.utils.data import DataLoader
 from shutil import copyfile
-
 
 def infer(args):
     model = load_model(args)
@@ -24,10 +24,10 @@ def infer(args):
     with torch.no_grad():
         with open(args.path_infer, 'w') as f:
             for sample in test_loader:
-                pred_zs, pred_ys = model(sample['pic'].cuda())
+                preds = model(sample['pic'].cuda())
                 gt_transforms = sample['transform']
 
-                for i in range(len(pred_zs)):
+                for i in range(len(preds)):
                     index = sample['index'][i].item()
                     print(index)
                     print(20  * '*')
@@ -36,19 +36,8 @@ def infer(args):
                     print("Det: ", np.linalg.det(gt_transform))
                     print(gt_transform)
 
-                    z = pred_zs[i].cpu().numpy()
-                    z /= np.linalg.norm(z)
-
-                    y = pred_ys[i].cpu().numpy()
-                    y = y - np.dot(z, y)*z
-                    y /= np.linalg.norm(y)
-
-                    x = np.cross(y, z)
-
-                    transform = np.zeros([3, 3])
-                    transform[:3, 0] = x
-                    transform[:3, 1] = y
-                    transform[:3, 2] = z
+                    # transform = GS_transform(preds[i:i+1]).cpu().numpy()
+                    transform = angles2Rotation_Matrix(preds[i]).cpu().numpy()
 
                     print("Predict:")
                     print("Det: ", np.linalg.det(transform))
@@ -61,7 +50,6 @@ if __name__ == '__main__':
     Example usage: python infer.py --no_preload -r 200 -iw 258 -ih 193 -b 32 /path/to/MLBinsDataset/EXR/dataset.json
     """
     # import os
-    os.environ['CUDA_VISIBLE_DEVICES']='2'
     pic_dir = '../blendre/output/'
     csv_dir = '../blendre/matice.csv'
     args = parse_command_line()
@@ -71,8 +59,8 @@ if __name__ == '__main__':
     args.input_height = 256
     args.batch_size = 32
     args.workers = 4
-    args.repr = 'GS'
-    args.path = 'GS/angle/'
+    args.repr = 'Euler'
+    args.path = 'Euler/elements/'
     for i in range(0, 101, 10):
         args.path_checkpoint = f'checkpoints/{args.path}{i:03d}.pth'
         args.path_infer = f'inferences/{args.path}infer_results{i:03d}.csv'
@@ -82,3 +70,4 @@ if __name__ == '__main__':
             break
 
         infer(args)
+        print(f'Inference {i} done {args.path_checkpoint} {args.path_infer}')
