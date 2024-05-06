@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 def get_angles(pred, gt, sym_inv=False, eps=1e-7):
     """
@@ -94,6 +95,20 @@ def GS_transform(preds):
     transform[:, :3, 2] = z
 
     return transform
+
+def quaternion2Rotation_Matrix(quaternion):
+    '''
+    Convert a quaternion to a rotation matrix
+    '''
+    r = Rotation.from_quat(quaternion)
+    return r.as_matrix()
+
+def rotation_Matrix2quaternion(R):
+    '''
+    Convert a rotation matrix to a quaternion
+    '''
+    r = Rotation.from_matrix(R)
+    return r.as_quat()
 
 
 class LossCalculator:
@@ -282,3 +297,36 @@ class QuaternionLossCalculator(LossCalculator):
         self.folder = f'results/Quaternion/{loss_type}/'
         self.train_file = self.folder + 'train_err.out'
         self.val_file = self.folder + 'val_err.out'
+    
+    def calculate_angle_loss(self, pred, gt):
+        pred_R = quaternion2Rotation_Matrix(pred)
+        true_transfrm = gt.float()
+
+        loss = torch.mean(calculate_eTE(true_transfrm, pred_R.cuda())).cuda()
+        self.loss_running = 0.9 * self.loss_running + 0.1 * loss
+
+        print(f'Running Loss: {self.loss_running.item()}')
+        return loss
+    
+    def calculate_val_angle_loss(self, pred, gt):
+        self.val_losses.append(self.calculate_angle_loss(pred, gt).detach().item())
+
+    def calculate_elements_loss(self, preds, true_transform):
+        gt_quats = torch.stack([rotation_Matrix2quaternion(true_transform[i]) for i in range(len(true_transform))])
+
+        loss = torch.mean(torch.abs(preds - gt_quats)).cuda()
+
+        self.loss_running = 0.9 * self.loss_running + 0.1 * loss
+
+        print(f'Running Loss: {self.loss_running.item()}')
+        return loss
+
+    def calculate_val_elements_loss(self, preds, true_transform):
+        loss = self.calculate_elements_loss(preds, true_transform)
+        self.val_losses.append(loss.detach().item())
+    
+    def print_results(self, e, epochs):
+        print(20 * "*")
+        print("Epoch {}/{}".format(e, epochs))
+        print("mean - val loss: {}".format(np.mean(self.val_losses)))
+        print("median - val loss: {}".format(np.median(self.val_losses)))

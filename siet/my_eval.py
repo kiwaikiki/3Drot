@@ -73,7 +73,7 @@ if __name__ == '__main__':
     Example usage: python evaluate.py path/to/dataset_with_predictions
     """
     truth = '../blendre/matice.csv'
-    path = 'Euler/elements/'
+    path = 'GS/elements/'
 
     with open(f'results/{path}test_err_by_epochs.csv', 'w') as f:
             pass

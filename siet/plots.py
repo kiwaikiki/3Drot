@@ -23,5 +23,5 @@ def plot_losses(path, train, val, test, title):
 
     
 if __name__ == "__main__":
-    path = 'results/Euler/elements/'
+    path = 'results/GS/elements/'
     plot_losses(path, f'{path}train_err.out', f'{path}val_err.out', f'{path}test_err_by_epochs.csv', 'Euler elements')

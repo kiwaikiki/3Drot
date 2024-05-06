@@ -26,7 +26,7 @@ def infer(args):
             for sample in test_loader:
                 preds = model(sample['pic'].cuda())
                 gt_transforms = sample['transform']
-
+    
                 for i in range(len(preds)):
                     index = sample['index'][i].item()
                     print(index)
@@ -35,9 +35,9 @@ def infer(args):
                     gt_transform = gt_transforms[i].cpu().numpy()
                     print("Det: ", np.linalg.det(gt_transform))
                     print(gt_transform)
-
-                    # transform = GS_transform(preds[i:i+1]).cpu().numpy()
-                    transform = angles2Rotation_Matrix(preds[i]).cpu().numpy()
+                    
+                    transform = GS_transform((preds[0][i],preds[1][i])).cpu().numpy()[0]
+                    # transform = angles2Rotation_Matrix(preds[i]).cpu().numpy()
 
                     print("Predict:")
                     print("Det: ", np.linalg.det(transform))
@@ -59,8 +59,8 @@ if __name__ == '__main__':
     args.input_height = 256
     args.batch_size = 32
     args.workers = 4
-    args.repr = 'Euler'
-    args.path = 'Euler/elements/'
+    args.repr = 'GS'
+    args.path = args.repr + '/elements/'
     for i in range(0, 101, 10):
         args.path_checkpoint = f'checkpoints/{args.path}{i:03d}.pth'
         args.path_infer = f'inferences/{args.path}infer_results{i:03d}.csv'

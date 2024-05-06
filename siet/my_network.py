@@ -102,6 +102,47 @@ class Network_Euler(torch.nn.Module):
 
         return angles
 
+class Network_Euler_Binned(torch.nn.Module):
+    def __init__(self, backbone='resnet18'):
+        super(Network_Euler_Binned, self).__init__()
+
+    
+        pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
+    
+        last_feat = list(pretrained_backbone_model.children())[-1].in_features // 2
+
+        self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
+
+        self.n_bins = 360/5
+
+        # make softmax for each angle
+        self.angles = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(128, 64),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(64, 3*self.n_bins))
+        
+        self.softmax = torch.nn.Softmax(dim=-1)
+        
+    def forward(self, x):
+        # x = self.init_conv(x)
+        x = self.backbone(x)
+
+        # Global Avg Pool
+        x = torch.mean(x, -1)
+        x = torch.mean(x, -1)
+
+        # Max pooling
+        # x = torch.max(x, -1)[0]
+        # x = torch.max(x, -1)[0]
+
+        angles = self.angles(x)
+        angles = self.softmax(angles)
+        angles = angles.view(-1, 3, self.n_bins)
+
+        return angles
+
+
 class Network_Quaternion(torch.nn.Module):
     def __init__(self, backbone='resnet18'):
         super(Network_Quaternion, self).__init__()
@@ -135,6 +176,129 @@ class Network_Quaternion(torch.nn.Module):
         q = self.q(x)
 
         return q
+    
+class Network_Axis_Angle(torch.nn.Module):
+    def __init__(self, backbone='resnet18'):
+        super(Network_Axis_Angle, self).__init__()
+
+    
+        pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
+    
+        last_feat = list(pretrained_backbone_model.children())[-1].in_features // 2
+
+        self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
+
+        
+        self.axis = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(128, 64),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(64, 3))
+
+        self.angle = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(128, 64),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(64, 1))
+
+    def forward(self, x):
+        # x = self.init_conv(x)
+        x = self.backbone(x)
+
+        # Global Avg Pool
+        x = torch.mean(x, -1)
+        x = torch.mean(x, -1)
+
+        # Max pooling
+        # x = torch.max(x, -1)[0]
+        # x = torch.max(x, -1)[0]
+
+        axis = self.axis(x)
+        angle = self.angle(x)
+
+        return axis, angle
+    
+class Network_Axis_Angle_Binned(torch.nn.Module):
+    def __init__(self, backbone='resnet18'):
+        super(Network_Axis_Angle_Binned, self).__init__()
+
+    
+        pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
+    
+        last_feat = list(pretrained_backbone_model.children())[-1].in_features // 2
+
+        self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
+
+        self.n_bins = 360/5
+
+        # make softmax for each angle
+        self.axis = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(128, 64),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(64, 3*self.n_bins))
+        
+        self.angle = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(128, 64),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(64, 1*self.n_bins))
+
+        self.softmax = torch.nn.Softmax(dim=-1)
+        
+    def forward(self, x):
+        # x = self.init_conv(x)
+        x = self.backbone(x)
+
+        # Global Avg Pool
+        x = torch.mean(x, -1)
+        x = torch.mean(x, -1)
+
+        # Max pooling
+        # x = torch.max(x, -1)[0]
+        # x = torch.max(x, -1)[0]
+
+        axis = self.axis(x)
+        
+        angle = self.angle(x)
+        angle = self.softmax(angle)
+        angle = angle.view(-1, 1, self.n_bins)
+
+        return axis, angle
+    
+class Network_Stereographic(torch.nn.Module):
+    def __init__(self, backbone='resnet18'):
+        super(Network_Stereographic, self).__init__()
+
+    
+        pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
+    
+        last_feat = list(pretrained_backbone_model.children())[-1].in_features // 2
+
+        self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
+
+        
+        self.stereo = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(128, 64),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(64, 5))
+
+    def forward(self, x):
+        # x = self.init_conv(x)
+        x = self.backbone(x)
+
+        # Global Avg Pool
+        x = torch.mean(x, -1)
+        x = torch.mean(x, -1)
+
+        # Max pooling
+        # x = torch.max(x, -1)[0]
+        # x = torch.max(x, -1)[0]
+
+        stereo = self.stereo(x)
+
+        return stereo
 
 def parse_command_line():
     """ Parser used for training and inference returns args. Sets up GPUs."""
@@ -169,11 +333,16 @@ def load_model(args):
     """
     which_repr = {
         'GS': Network_GS,
-        'Euler': Network_Euler
+        'Euler': Network_Euler,
+        'Euler_binned': Network_Euler_Binned,
+        'Quaternion': Network_Quaternion,
+        'Axis_Angle': Network_Axis_Angle,
+        'Axis_Angle_binned': Network_Axis_Angle_Binned,
+        'Stereographic': Network_Stereographic
     }
     repr_network = which_repr[args.repr] 
     model = repr_network(backbone=args.backbone).cuda()
-    # model = Network_Euler(backbone=args.backbone).cuda()
+    
     # if args.resume is not None:
     #     sd_path = 'checkpoints/{:03d}.pth'.format(args.resume)
     #     print("Resuming from: ", sd_path)

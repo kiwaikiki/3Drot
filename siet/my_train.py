@@ -99,8 +99,6 @@ def train(args):
         # clean also cpu memory
           
     loss_calculator.save_results()
-    torch.save(model.state_dict(), args.path_checkpoints + '{:03d}.pth'.format(e))
-
     # release memory
 
 
@@ -120,10 +118,10 @@ if __name__ == '__main__':
     args.batch_size = 64
     args.workers = 8
     args.dump_every = 10
-    args.repr = 'GS'
-    args.loss_type = 'angle'
+    args.repr = 'Quaternion'
+    args.loss_type = 'elements'
     args.path_checkpoints = f'checkpoints/{args.repr}/{args.loss_type}/'
 
-    args.epochs = 100
+    args.epochs = 251
 
     train(args)
