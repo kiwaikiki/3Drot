@@ -105,7 +105,6 @@ class Network_Euler(torch.nn.Module):
 class Network_Euler_Binned(torch.nn.Module):
     def __init__(self, backbone='resnet18'):
         super(Network_Euler_Binned, self).__init__()
-
     
         pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
     
@@ -300,6 +299,41 @@ class Network_Stereographic(torch.nn.Module):
 
         return stereo
 
+class Network_Matrix(torch.nn.Module):
+    def __init__(self, backbone='resnet18'):
+        super(Network_Matrix, self).__init__()
+
+    
+        pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
+    
+        last_feat = list(pretrained_backbone_model.children())[-1].in_features // 2
+
+        self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
+
+        
+        self.matrix = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(128, 64),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(64, 9))
+    
+    def forward(self, x):
+        # x = self.init_conv(x)
+        x = self.backbone(x)
+
+        # Global Avg Pool
+        x = torch.mean(x, -1)
+        x = torch.mean(x, -1)
+
+        # Max pooling
+        # x = torch.max(x, -1)[0]
+        # x = torch.max(x, -1)[0]
+
+        matrix = self.matrix(x)
+        matrix = matrix.view(-1, 3, 3)
+
+        return matrix
+    
 def parse_command_line():
     """ Parser used for training and inference returns args. Sets up GPUs."""
     parser = argparse.ArgumentParser()
@@ -338,7 +372,8 @@ def load_model(args):
         'Quaternion': Network_Quaternion,
         'Axis_Angle': Network_Axis_Angle,
         'Axis_Angle_binned': Network_Axis_Angle_Binned,
-        'Stereographic': Network_Stereographic
+        'Stereographic': Network_Stereographic,
+        'Matrix': Network_Matrix
     }
     repr_network = which_repr[args.repr] 
     model = repr_network(backbone=args.backbone).cuda()

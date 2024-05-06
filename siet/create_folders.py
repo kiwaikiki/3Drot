@@ -7,6 +7,7 @@ reprs = [
         'Axis_Angle',
         'Axis_Angle_binned',
         'Stereographic'
+        'Matrix'
     ]
 losses = ['angle', 'elements']
 
