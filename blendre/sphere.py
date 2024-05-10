@@ -19,6 +19,20 @@ bud
     - 
 '''
 
+def rotation_angle(R):
+    '''
+    Calculate the rotation angle of a single tranformation by a 3x3 rotation matrix R
+    '''
+    return np.rad2deg(np.arccos(np.clip((np.trace(R) - 1) / 2, -1, 1)))
+
+def calculate_eRE(R_gt, R_est):
+    '''
+    Calculate the angle between two rotation matrices R_gt and R_est
+    ''' 
+    # angles = np..apply_along_axis(lambda Rt, Re: rotation_angle(Rt.T @ Re), 1, R_gt, R_est)
+    angle = rotation_angle(R_gt.T @ R_est)
+    return angle
+
 def geodesic_distance(p1, p2, r=1):
     '''
         Calculate geodesic distance between two points on the sphere
@@ -68,6 +82,40 @@ def generate_blobs(n, max_r, min_r):
             r = np.random.uniform(min_r, max_r)
         blobs.append((center, r))
     return blobs
+
+def golden_rotation_matrices(n):
+    matrices = []
+    inc = np.pi * (3 - np.sqrt(5))
+    for i in range(n):
+        theta = i * inc
+        phi = np.arccos(1 - 2*(i+0.5)/n)
+        x = np.cos(theta) * np.sin(phi)
+        y = np.sin(theta) * np.sin(phi)
+        z = np.cos(phi)
+        # Calculate rotation matrix
+        R = np.array([[np.cos(theta), -np.sin(theta), 0],
+                      [np.sin(theta), np.cos(theta), 0],
+                      [0, 0, 1]])
+        R = np.dot(R, [[np.cos(phi), 0, np.sin(phi)],
+                       [0, 1, 0],
+                       [-np.sin(phi), 0, np.cos(phi)]])
+        matrices.append(R)
+    return matrices
+
+
+def golden_spiral(n, radius):
+    points = []
+    inc = np.pi * (3 - np.sqrt(5))
+    offset = 2 / n
+    for i in range(n):
+        y = i * offset - 1 + (offset / 2)
+        r = np.sqrt(1 - y * y)
+        phi = i * inc
+        x = np.cos(phi) * r
+        z = np.sin(phi) * r
+        points.append(((x, y, z), radius))
+    return points
+
 
 def save_blobs(blobs, path):    
     with open(path, 'w') as f:
@@ -127,23 +175,43 @@ def solid_sphere_w_blobs(blobs = None):
     plt.savefig('sphere3.png')
     # plt.show() 
 
+def is_in_blob_matrix(matrix, matrices, angle):
+    for mat in matrices:
+        if rotation_angle(mat.T @ matrix) < angle:
+            return True
+    return False
+        
 
-def scatter_sphere_w_blobs(blobs=None):
-    # Create data for the sphere
-    # u = np.linspace(0, 2 * np.pi, 100)
-    # v = np.linspace(0, np.pi, 100)
-    # x = np.outer(np.cos(u), np.sin(v))
-    # y = np.outer(np.sin(u), np.sin(v))
-    # z = np.outer(np.ones(np.size(u)), np.cos(v))
-
-    # Plot the sphere
+def scatter_sphere_w_matrices(path, matrices=None):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    # ax.plot_surface(x, y, z, color='b', alpha=1, zorder=1)
+
+    if matrices is None:
+        matrices = golden_rotation_matrices(10)
+
+    table = np.loadtxt(f'{path}/train/matice.csv', delimiter = ',')
+    for i, *x in table:
+        R = np.array(x).reshape(3, 3)
+        vec = np.array([1, 0, 0])
+        vec = R @ vec
+        x, y, z = vec
+        if is_in_blob_matrix(R, matrices, 0.2):
+            ax.scatter(x, y, z, c='r', s=10, zorder=4)       
+        else:
+            ax.scatter(x, y, z, c='g', s=10, zorder=4)
+
+
+
+    plt.savefig('sphere2.png')
+    # plt.show()
+
+def scatter_sphere_w_blobs(blobs=None):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
 
     if blobs is None:
         blobs = generate_blobs(10, 0.5, 0.1)
-    table = np.loadtxt(path, delimiter = ',')
+    table = np.loadtxt(f'{path}/train/matice.csv', delimiter = ',')
 
     for i, *x in table:
         i = int(i) 
@@ -161,42 +229,43 @@ def scatter_sphere_w_blobs(blobs=None):
 
 
 def sphere_by_set(path, filt, col):
-    table = np.loadtxt(path, delimiter = ',')
+    table_train = np.loadtxt(f'{path}/train/matice.csv', delimiter = ',')
     fig = plt.figure()
     ax = plt.axes(projection ='3d')
-    # r = 1
-    # pi = np.pi
-    # cos = np.cos
-    # sin = np.sin
-    # phi, theta = np.mgrid[0.0:pi:100j, 0.0:2.0*pi:100j]
-    # x = r*sin(phi)*cos(theta)
-    # y = r*sin(phi)*sin(theta)
-    # z = r*cos(phi)
-
-    # # ax.plot_surface(x, y, z,  rstride=1, cstride=1, color='gray', alpha=0.6, linewidth=0)
-
-    for i, *x in table:
-        i = int(i) 
-        vec = np.array([1, 0, 0])
-        R = np.array(x).reshape(3, 3)
-        vec = R @ vec
-        color = col[filt[i%10]]
-        ax.scatter([0, vec[0]], [0, vec[1]], [0, vec[2]], c = color, s = 1, alpha = 1)
     
+    def f(x):
+        vec = np.array([0, 1, 0])
+        R = np.array(x[1:]).reshape(3, 3)
+        return R @ vec 
+    
+    ax.scatter(0, 1, 0, c='black', s=20, zorder=5)
 
+    matrices = np.apply_along_axis(f, 1, table_train)
+    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=col['train'], s=10, zorder=4)
+
+    table_val = np.loadtxt(f'{path}/val/matice.csv', delimiter = ',')
+    matrices = np.apply_along_axis(f, 1, table_val)
+    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=col['val'], s=10, zorder=4)
+
+    table_test = np.loadtxt(f'{path}/test/matice.csv', delimiter = ',')
+    matrices = np.apply_along_axis(f, 1, table_test)
+    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=col['test'], s=10, zorder=3)
+   
     plt.savefig('sphere.png')
-    # plt.show()
+    plt.show()
 
 
 if __name__ == '__main__':
-    path = 'matice.csv'
+    path = 'cube_quad'
     filt = {0: 'val', 5: 'test', 1: 'train', 2: 'train', 3: 'train', 4: 'train', 6: 'train', 7: 'train', 8: 'train', 9: 'train'}
     col = {'train': 'lightblue', 'val': 'green', 'test': 'red'}
-    sphere_by_set(path, filt, col)
-    blobs = generate_blobs(10, 0.3, 0.1)
-    save_blobs(blobs, 'blobs.csv')
-    scatter_sphere_w_blobs(blobs)
-    solid_sphere_w_blobs(blobs)
+    # sphere_by_set(path, filt, col)
+    matrices = golden_rotation_matrices(10)
+    # blobs = golden_spiral(20, 0.2)
+    # save_blobs(blobs, 'blobs.csv')
+    # scatter_sphere_w_blobs(blobs)
+    # solid_sphere_w_blobs(blobs)
+    scatter_sphere_w_matrices(path, matrices)
 
     '''
     momentalne bloby funguju:
