@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
-
+import matplotlib.patches as mpatches
 
 '''
 potrebujem:
@@ -44,8 +44,7 @@ def geodesic_distance(p1, p2, r=1):
         Returns:
             float: geodesic distance between the points
     '''
-    dot = min(1, max(-1, np.dot(p1, p2)))
-    return r * np.arccos(dot)
+    return r * np.arccos(np.clip(np.dot(p1, p2), -1, 1))
 
 def is_in_blob(point, blobs):
     '''
@@ -155,12 +154,19 @@ def solid_sphere_w_blobs(blobs = None):
             x = X[i, j]
             y = Y[i, j]
             z = Z[i, j]
-            heatmap[i, j] = is_in_blob(np.array([x, y, z]), blobs )
+            heatmap[i, j] = 0.5 # is_in_blob(np.array([x, y, z]), blobs )
     heatmap = heatmap / np.amax( heatmap )
 
     ax.plot_surface( X, Y, Z, cstride=1, rstride=1, facecolors=cm.cool(heatmap), alpha=0.15)
+
+    pink_patch = mpatches.Patch(color=plt.cm.cool(0.0), label='train + validation set')
+    cyan_patch = mpatches.Patch(color=plt.cm.cool(1.0), label='test set')
+    # purple_patch = mpatches.Patch(color=plt.cm.cool(0.5), label='all sets')
+
+    plt.legend(handles=[pink_patch, cyan_patch], bbox_to_anchor=(0.95, 0.92), fontsize='xx-large')
+    
     plt.savefig('sphere3.png')
-    # plt.show() 
+    plt.show() 
 
 def is_in_blob_matrix(matrix, matrices, angle):
     for mat in matrices:
@@ -174,7 +180,6 @@ def is_in_blob_matrix(matrix, matrices, angle):
             print(geodesic_distance(vec1, vec2))
             return True
     return False
-
 
 def rotation_matrix_from_vectors(v1, v2):
     '''
@@ -194,7 +199,6 @@ def rotation_matrix_from_vectors(v1, v2):
     skew = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
     return np.eye(3) + skew + skew @ skew * (1 - c) / (s ** 2)
         
-
 def scatter_sphere_w_matrices(path, matrices=None):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -238,9 +242,7 @@ def scatter_sphere_w_blobs(blobs=None):
     plt.savefig('sphere2.png')
     # plt.show()
 
-
-def sphere_by_set(path, filt, col):
-    table_train = np.loadtxt(f'{path}/train/matice.csv', delimiter = ',')
+def sphere_by_set(path):
     fig = plt.figure()
     ax = plt.axes(projection ='3d')
     
@@ -250,20 +252,22 @@ def sphere_by_set(path, filt, col):
         return R @ vec 
     
     ax.scatter(0, 1, 0, c='black', s=20, zorder=5)
-
-    matrices = np.apply_along_axis(f, 1, table_train)
-    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=col['train'], label='train set')
+    
+    table_test = np.loadtxt(f'{path}/test/matice.csv', delimiter = ',')
+    matrices = np.apply_along_axis(f, 1, table_test)
+    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=plt.cm.cool(1.0), label='test set', alpha=1, zorder=2)
 
     table_val = np.loadtxt(f'{path}/val/matice.csv', delimiter = ',')
     matrices = np.apply_along_axis(f, 1, table_val)
-    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=col['val'], label='validation set')
+    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=plt.cm.cool(0.5), label='validation set', alpha=1, zorder=3)
 
-    table_test = np.loadtxt(f'{path}/test/matice.csv', delimiter = ',')
-    matrices = np.apply_along_axis(f, 1, table_test)
-    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=col['test'], label='test set')
+    table_train = np.loadtxt(f'{path}/train/matice.csv', delimiter = ',')
+    matrices = np.apply_along_axis(f, 1, table_train)
+    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c="lightblue", label='train set', alpha=0.2, zorder=4)
     
-    plt.legend()
-    plt.savefig('sphere.png')
+   
+    plt.legend(bbox_to_anchor=(0.95, 0.92), fontsize='xx-large')
+    plt.savefig('sphere.png', bbox_inches='tight')
     plt.show()
 
 def check_matrices(matrices):
@@ -279,12 +283,12 @@ def check_matrices(matrices):
     plt.show()
 
 if __name__ == '__main__':
-    path = 'cube_quad'
-    filt = {0: 'val', 5: 'test', 1: 'train', 2: 'train', 3: 'train', 4: 'train', 6: 'train', 7: 'train', 8: 'train', 9: 'train'}
-    col = {'train': 'lightblue', 'val': 'green', 'test': 'red'}
-    sphere_by_set(path, filt, col)
+    path = 'cool_cube'
+    sphere_by_set(path)
     # matrices = evenly_spaced_rotation_matrices(10)
     # check_matrices(matrices)
+    # blobs = load_blobs('blobs.csv')
+    # blobs = [(np.array([1, 0, 0]), 0.5)]
     # blobs = golden_spiral(20, 0.2)
     # save_blobs(blobs, 'blobs.csv')
     # scatter_sphere_w_blobs(blobs)

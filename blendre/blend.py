@@ -57,12 +57,11 @@ class PictureGenerator:
                 bpy.context.scene.render.filepath = os.path.join(output_dir, f"{id:04d}.png")
                 bpy.ops.render.render(write_still=True)
 
-            print(f'Elapsed time: {time.time() - start_time}')
+        return (f'Elapsed time: {time.time() - start_time}')
 
-    def render_blobs(self, output_dir, blob_file, matrix_file, number_of_angles=100):
+    def render_blobs(self, output_dir, matrix_file, blobs, number_of_angles=100):
         with open(f'{output_dir}/{matrix_file}', 'w') as f:
             start_time = time.time()  
-            blobs = load_blobs(blob_file)
             generated = 0
             while generated < number_of_angles:
                 angle = (np.random.uniform(0, 2*np.pi), 
@@ -78,17 +77,15 @@ class PictureGenerator:
                 
                 vec = np.array(self.obj.matrix_world)[:3,:3] @ np.array([1, 0, 0])
                 print(vec)
-                if not is_in_blob(vec, blobs) :    
+                if is_in_blob(vec, blobs) :    
                     matrix = matrix2csv(self.obj.matrix_world)
                     print(f'{generated},{matrix}', file = f)
                
                     bpy.context.scene.render.filepath = os.path.join(output_dir, f"{generated:04d}.png")
                     bpy.ops.render.render(write_still=True)
                     generated += 1
-                
 
             print(f'Elapsed time: {time.time() - start_time}')
-
 
 
     def add_texture(self, texture_file=None):
@@ -184,10 +181,11 @@ def rotation_Matrix2angles(R):
 
 if __name__ == "__main__":
     gen = PictureGenerator('modely/kocky_texture.fbx', (256, 256), 'textury/cool_voronoi.png')
-    
-    gen.render_blobs('cube_dotted/train', 'blobs.csv', 'matice.csv', 8000)
-    gen.render_blobs('cube_dotted/val', 'blobs.csv', 'matice.csv', 2000)
-    # gen.render_blobs('cube_dotted/test', 'blobs.csv', 'matice.csv', 1000)   #480 sec
+    # blobs = load_blobs('blobs.csv')
+    # blobs = [(np.array([1, 0, 0]), 0.5)]
+    gen.render_object_from_angles('cool_cube/train', 'matice.csv', 8000)
+    gen.render_object_from_angles('cool_cube/val', 'matice.csv', 2000)
+    # gen.render_object_from_angles('cool_cube/test', 'matice.csv', 1000)
 #     # gen.paralel_rendering()
 # # check
 # #  
