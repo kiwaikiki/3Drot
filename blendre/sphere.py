@@ -18,6 +18,14 @@ bud
 - potom pre kazdy v testovacom prejdem vsetky v trenovaciom a 
     - 
 '''
+def angle_between_rotations(R1, R2):
+    R = np.dot(R1, np.transpose(R2))
+    trace = np.trace(R)
+    trace = max(-1.0, min(trace, 3.0))
+    cos_angle = (trace - 1) / 2.0
+    angle = np.arccos(cos_angle)
+    return np.rad2deg(angle)
+
 
 def rotation_angle(R):
     '''
@@ -25,13 +33,6 @@ def rotation_angle(R):
     '''
     return np.rad2deg(np.arccos(np.clip((np.trace(R) - 1) / 2, -1, 1)))
 
-def calculate_eRE(R_gt, R_est):
-    '''
-    Calculate the angle between two rotation matrices R_gt and R_est
-    ''' 
-    # angles = np..apply_along_axis(lambda Rt, Re: rotation_angle(Rt.T @ Re), 1, R_gt, R_est)
-    angle = rotation_angle(R_gt.T @ R_est)
-    return angle
 
 def geodesic_distance(p1, p2, r=1):
     '''
@@ -83,25 +84,12 @@ def generate_blobs(n, max_r, min_r):
         blobs.append((center, r))
     return blobs
 
-def golden_rotation_matrices(n):
+def evenly_spaced_rotation_matrices(n):
+    spiral_points = golden_spiral(n, 1)
     matrices = []
-    inc = np.pi * (3 - np.sqrt(5))
-    for i in range(n):
-        theta = i * inc
-        phi = np.arccos(1 - 2*(i+0.5)/n)
-        x = np.cos(theta) * np.sin(phi)
-        y = np.sin(theta) * np.sin(phi)
-        z = np.cos(phi)
-        # Calculate rotation matrix
-        R = np.array([[np.cos(theta), -np.sin(theta), 0],
-                      [np.sin(theta), np.cos(theta), 0],
-                      [0, 0, 1]])
-        R = np.dot(R, [[np.cos(phi), 0, np.sin(phi)],
-                       [0, 1, 0],
-                       [-np.sin(phi), 0, np.cos(phi)]])
-        matrices.append(R)
+    for point, r in spiral_points:
+        matrices.append(rotation_matrix_from_vectors(np.array([1, 0, 0]), point))
     return matrices
-
 
 def golden_spiral(n, radius):
     points = []
@@ -115,7 +103,6 @@ def golden_spiral(n, radius):
         z = np.sin(phi) * r
         points.append(((x, y, z), radius))
     return points
-
 
 def save_blobs(blobs, path):    
     with open(path, 'w') as f:
@@ -177,9 +164,35 @@ def solid_sphere_w_blobs(blobs = None):
 
 def is_in_blob_matrix(matrix, matrices, angle):
     for mat in matrices:
-        if rotation_angle(mat.T @ matrix) < angle:
+        rot_ang = angle_between_rotations(matrix, mat)
+        # print(rot_ang)
+        if rot_ang < 20:
+            vec1 = np.array([1, 0, 0])
+            vec2 = np.array([1, 0, 0])
+            vec1 = mat @ vec1
+            vec2 = matrix @ vec2
+            print(geodesic_distance(vec1, vec2))
             return True
     return False
+
+
+def rotation_matrix_from_vectors(v1, v2):
+    '''
+        Calculate the rotation matrix that rotates v1 to v2
+        Parameters:
+            v1 (np.array): vector to rotate
+            v2 (np.array): target vector
+        
+        Returns:
+            np.array: rotation matrix
+    '''
+    v1 = v1 / np.linalg.norm(v1)
+    v2 = v2 / np.linalg.norm(v2)
+    v = np.cross(v1, v2)
+    s = np.linalg.norm(v)
+    c = np.dot(v1, v2)
+    skew = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+    return np.eye(3) + skew + skew @ skew * (1 - c) / (s ** 2)
         
 
 def scatter_sphere_w_matrices(path, matrices=None):
@@ -187,7 +200,7 @@ def scatter_sphere_w_matrices(path, matrices=None):
     ax = fig.add_subplot(111, projection='3d')
 
     if matrices is None:
-        matrices = golden_rotation_matrices(10)
+        matrices = evenly_spaced_rotation_matrices(10)
 
     table = np.loadtxt(f'{path}/train/matice.csv', delimiter = ',')
     for i, *x in table:
@@ -195,15 +208,13 @@ def scatter_sphere_w_matrices(path, matrices=None):
         vec = np.array([1, 0, 0])
         vec = R @ vec
         x, y, z = vec
-        if is_in_blob_matrix(R, matrices, 0.2):
-            ax.scatter(x, y, z, c='r', s=10, zorder=4)       
+        if is_in_blob_matrix(R, matrices, 40):
+            ax.scatter(x, y, z, c='r')       
         else:
-            ax.scatter(x, y, z, c='g', s=10, zorder=4)
-
-
+            ax.scatter(x, y, z, c='g')
 
     plt.savefig('sphere2.png')
-    # plt.show()
+    plt.show()
 
 def scatter_sphere_w_blobs(blobs=None):
     fig = plt.figure()
@@ -234,38 +245,51 @@ def sphere_by_set(path, filt, col):
     ax = plt.axes(projection ='3d')
     
     def f(x):
-        vec = np.array([0, 1, 0])
+        vec = np.array([1, 0, 0])
         R = np.array(x[1:]).reshape(3, 3)
         return R @ vec 
     
     ax.scatter(0, 1, 0, c='black', s=20, zorder=5)
 
     matrices = np.apply_along_axis(f, 1, table_train)
-    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=col['train'], s=10, zorder=4)
+    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=col['train'], label='train set')
 
     table_val = np.loadtxt(f'{path}/val/matice.csv', delimiter = ',')
     matrices = np.apply_along_axis(f, 1, table_val)
-    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=col['val'], s=10, zorder=4)
+    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=col['val'], label='validation set')
 
     table_test = np.loadtxt(f'{path}/test/matice.csv', delimiter = ',')
     matrices = np.apply_along_axis(f, 1, table_test)
-    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=col['test'], s=10, zorder=3)
-   
+    ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=col['test'], label='test set')
+    
+    plt.legend()
     plt.savefig('sphere.png')
     plt.show()
 
+def check_matrices(matrices):
+    fig = plt.figure()
+    ax = plt.axes(projection ='3d')
+
+    for mat in matrices:
+        vec = np.array([1, 0, 0])
+        vec = mat @ vec
+        x, y, z = vec
+        ax.scatter(x, y, z, c='r', s=10, zorder=4)    
+
+    plt.show()
 
 if __name__ == '__main__':
     path = 'cube_quad'
     filt = {0: 'val', 5: 'test', 1: 'train', 2: 'train', 3: 'train', 4: 'train', 6: 'train', 7: 'train', 8: 'train', 9: 'train'}
     col = {'train': 'lightblue', 'val': 'green', 'test': 'red'}
-    # sphere_by_set(path, filt, col)
-    matrices = golden_rotation_matrices(10)
+    sphere_by_set(path, filt, col)
+    # matrices = evenly_spaced_rotation_matrices(10)
+    # check_matrices(matrices)
     # blobs = golden_spiral(20, 0.2)
     # save_blobs(blobs, 'blobs.csv')
     # scatter_sphere_w_blobs(blobs)
     # solid_sphere_w_blobs(blobs)
-    scatter_sphere_w_matrices(path, matrices)
+    # scatter_sphere_w_matrices(path, matrices)
 
     '''
     momentalne bloby funguju:

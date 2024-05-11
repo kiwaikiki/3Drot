@@ -72,15 +72,20 @@ class PictureGenerator:
                 self.obj.rotation_mode = "XYZ"
                 self.obj.rotation_euler = angle
                 self.obj.rotation_mode  = previous_mode
-
-                if matrix_file.endswith('.csv'):
-                    matrix = matrix2csv(self.obj.matrix_world)
-                    print(f'{id-1},{matrix}', file = f)
-                else:  
-                    matrix = matrix2string(self.obj.matrix_world) 
-                    print(f'{id-1}\n{matrix}', file = f)
-                bpy.context.scene.render.filepath = os.path.join(output_dir, f"{id:04d}.png")
+                bpy.context.scene.render.filepath = os.path.join(output_dir, f"bs.png")
                 bpy.ops.render.render(write_still=True)
+
+                
+                vec = np.array(self.obj.matrix_world)[:3,:3] @ np.array([1, 0, 0])
+                print(vec)
+                if not is_in_blob(vec, blobs) :    
+                    matrix = matrix2csv(self.obj.matrix_world)
+                    print(f'{generated},{matrix}', file = f)
+               
+                    bpy.context.scene.render.filepath = os.path.join(output_dir, f"{generated:04d}.png")
+                    bpy.ops.render.render(write_still=True)
+                    generated += 1
+                
 
             print(f'Elapsed time: {time.time() - start_time}')
 
@@ -180,9 +185,9 @@ def rotation_Matrix2angles(R):
 if __name__ == "__main__":
     gen = PictureGenerator('modely/kocky_texture.fbx', (256, 256), 'textury/cool_voronoi.png')
     
-    gen.render_object_from_angles('cube_quad/train', 'matice.csv', 500)
-    # gen.render_object_from_angles('cube_quad/val', 'matice.csv', 100)
-    # gen.render_object_from_angles('cube_quad/test', 'matice.csv', 100)  
+    gen.render_blobs('cube_dotted/train', 'blobs.csv', 'matice.csv', 8000)
+    gen.render_blobs('cube_dotted/val', 'blobs.csv', 'matice.csv', 2000)
+    # gen.render_blobs('cube_dotted/test', 'blobs.csv', 'matice.csv', 1000)   #480 sec
 #     # gen.paralel_rendering()
 # # check
 # #  
