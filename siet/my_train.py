@@ -8,11 +8,18 @@ import gc
 
 from my_network import normalized_l2_loss,  load_model, parse_command_line
 from my_dataset import Dataset
-from my_loss import GSLossCalculator, EulerLossCalculator
+from my_loss import GS_Loss_Calculator, Euler_Loss_Calculator, Euler_binned_Loss_Calculator, Quaternion_Loss_Calculator, Axis_angle_Loss_Calculator
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 torch.autograd.set_detect_anomaly(True)
 gc.enable()
+
+# select device
+# # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["NVIDIA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 soft, hard = resource.getrlimit(resource.RLIMIT_DATA)
 print('Soft limit starts as  :', soft)
@@ -45,8 +52,7 @@ def train(args):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
-    loss_calculator = EulerLossCalculator(args.loss_type) if args.repr == 'Euler' else GSLossCalculator(args.loss_type)
-    # l1_loss = torch.nn.L1Loss()
+    loss_calculator = args.loss_calculator(args.loss_type)
 
     start_epoch = 0 if args.resume is None else args.resume
 
@@ -107,7 +113,7 @@ if __name__ == '__main__':
     """
     Example usage: python train.py -iw 1032 -ih 772 -b 12 -e 500 -de 10 -lr 1e-3 -bb resnet34 -w 0.1 /path/to/MLBinsDataset/EXR/dataset.json
     """
-    # args = parse_command_line()
+    # args = parse_command_line()p
     pic_dir = '../blendre/output/'
     csv_dir = '../blendre/matice.csv'
     args = parse_command_line()
@@ -116,12 +122,20 @@ if __name__ == '__main__':
     args.input_width = 256
     args.input_height = 256
     args.batch_size = 64
-    args.workers = 8
+    args.workers = 4
     args.dump_every = 10
-    args.repr = 'Quaternion'
-    args.loss_type = 'elements'
+    args.repr = 'Euler'
+    args.loss_type = 'angle'
+    loss_calcs = {
+        'GS': GS_Loss_Calculator,
+        'Euler': Euler_Loss_Calculator,
+        'Euler_binned': Euler_binned_Loss_Calculator,
+        'Quaternion': Quaternion_Loss_Calculator,
+        'Axis-angle': Axis_angle_Loss_Calculator
+    }
+    args.loss_calculator = loss_calcs[args.repr]
     args.path_checkpoints = f'checkpoints/{args.repr}/{args.loss_type}/'
-
-    args.epochs = 251
+    # args.resume = 70
+    args.epochs = 101
 
     train(args)

@@ -6,7 +6,7 @@ reprs = [
         'Quaternion',
         'Axis_Angle',
         'Axis_Angle_binned',
-        'Stereographic'
+        'Stereographic',
         'Matrix'
     ]
 losses = ['angle', 'elements']

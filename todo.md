@@ -1,3 +1,30 @@
+spojazdnit:
+- euler%binned + infer
+- axis angle 4D + infer
+- axis angle 3D + infer
+- matice + infer
+
+
+vygenerovat ilustraciu ze menej vrstiev => lepsie vysledky
+vytvorit grafy z vysledkov
+vsade hodin korniove konverzie
+prettytable poukladat z kazdeho vysludku ku results a ulozit vahy
+skusit inak farebny dataset
+vygenerovat dataset iba z nejakych oblastii
+vygenerovat gulovy dataset
+zmerat metriky datasetu
+
+nazov obrazku aku rot, aka true, aka chyba, ulozit
+
+
+
+
+
+
+
+
+
+
 dalsie moznosti rotacie
 
 
