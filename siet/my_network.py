@@ -24,7 +24,6 @@ def normalized_l2_loss(pred, gt, reduce=True):
 class Network_GS(torch.nn.Module):
     def __init__(self, backbone='resnet18'):
         super(Network_GS, self).__init__()
-
         
         pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
     
@@ -32,18 +31,22 @@ class Network_GS(torch.nn.Module):
 
         self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
 
-        
-        self.fc_z = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(128, 64),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(64, 3))
+        self.fc_z = torch.nn.Linear(last_feat, 3) #staci iba toto mozno
+        self.fc_y = torch.nn.Linear(last_feat, 3) #staci iba toto mozno
 
-        self.fc_y = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(128, 64),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(64, 3))
+        
+        # self.fc_z = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(128, 64),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(64, 3))
+
+        # self.fc_y = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(128, 64),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(64, 3))
+
 
         # self.fc_t = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
         #                                 torch.nn.LeakyReLU(),
@@ -101,6 +104,7 @@ class Network_Euler(torch.nn.Module):
         angles = self.angles(x)
 
         return angles
+    
 
 class Network_Euler_Binned(torch.nn.Module):
     def __init__(self, backbone='resnet18'):
@@ -112,7 +116,8 @@ class Network_Euler_Binned(torch.nn.Module):
 
         self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
 
-        self.n_bins = 360/5
+
+        self.n_bins = 360
 
         # make softmax for each angle
         self.angles = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
@@ -121,7 +126,6 @@ class Network_Euler_Binned(torch.nn.Module):
                                         torch.nn.LeakyReLU(),
                                         torch.nn.Linear(64, 3*self.n_bins))
         
-        self.softmax = torch.nn.Softmax(dim=-1)
         
     def forward(self, x):
         # x = self.init_conv(x)
@@ -135,9 +139,9 @@ class Network_Euler_Binned(torch.nn.Module):
         # x = torch.max(x, -1)[0]
         # x = torch.max(x, -1)[0]
 
-        angles = self.angles(x)
-        angles = self.softmax(angles)
-        angles = angles.view(-1, 3, self.n_bins)
+        angles = self.angles(x).view(-1, 3, self.n_bins)
+        # angles = self.softmax(angles)
+        # angles = angles.view(-1, 3, self.n_bins)
 
         return angles
 
@@ -176,10 +180,26 @@ class Network_Quaternion(torch.nn.Module):
 
         return q
     
-class Network_Axis_Angle(torch.nn.Module):
+class Network_Axis_Angle_3D(torch.nn.Module):
     def __init__(self, backbone='resnet18'):
-        super(Network_Axis_Angle, self).__init__()
+        super(Network_Axis_Angle_3D, self).__init__()
+        pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
 
+        last_feat = list(pretrained_backbone_model.children())[-1].in_features // 2
+
+        self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
+
+        self.axis = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(128, 64),
+                                        torch.nn.LeakyReLU(),
+                                        torch.nn.Linear(64, 3))
+        
+        
+
+class Network_Axis_Angle_4D(torch.nn.Module):
+    def __init__(self, backbone='resnet18'):
+        super(Network_Axis_Angle_4D, self).__init__()
     
         pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
     
@@ -230,12 +250,11 @@ class Network_Axis_Angle_Binned(torch.nn.Module):
 
         self.n_bins = 360/5
 
-        # make softmax for each angle
         self.axis = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
                                         torch.nn.LeakyReLU(),
                                         torch.nn.Linear(128, 64),
                                         torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(64, 3*self.n_bins))
+                                        torch.nn.Linear(64, 3))
         
         self.angle = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
                                         torch.nn.LeakyReLU(),
@@ -243,7 +262,6 @@ class Network_Axis_Angle_Binned(torch.nn.Module):
                                         torch.nn.LeakyReLU(),
                                         torch.nn.Linear(64, 1*self.n_bins))
 
-        self.softmax = torch.nn.Softmax(dim=-1)
         
     def forward(self, x):
         # x = self.init_conv(x)
@@ -370,7 +388,7 @@ def load_model(args):
         'Euler': Network_Euler,
         'Euler_binned': Network_Euler_Binned,
         'Quaternion': Network_Quaternion,
-        'Axis_Angle': Network_Axis_Angle,
+        'Axis_Angle': Network_Axis_Angle_3D,
         'Axis_Angle_binned': Network_Axis_Angle_Binned,
         'Stereographic': Network_Stereographic,
         'Matrix': Network_Matrix
@@ -378,8 +396,8 @@ def load_model(args):
     repr_network = which_repr[args.repr] 
     model = repr_network(backbone=args.backbone).cuda()
     
-    # if args.resume is not None:
-    #     sd_path = 'checkpoints/{:03d}.pth'.format(args.resume)
-    #     print("Resuming from: ", sd_path)
-    #     model.load_state_dict(torch.load(sd_path))
+    if args.resume is not None:
+        sd_path = f'siet/training_data/{args.path_pics}/checkpoints/{args.repr}/{args.loss_type}/{args.resume:03d}.pth'
+        print("Resuming from: ", sd_path)
+        model.load_state_dict(torch.load(sd_path))
     return model

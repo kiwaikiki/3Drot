@@ -16,7 +16,7 @@ class Dataset(Dataset):
         self.pictures = None
 
         self.load_matrices()
-        self.load_pictures()
+        # self.load_pictures()
 
         print("Split: ", self.split)
         print("Size: ", len(self))
@@ -83,19 +83,10 @@ if __name__ == "__main__":
     dataset = Dataset(pic_dir, csv_dir, split = 'val')
     data_loader = DataLoader(dataset, batch_size=4, shuffle=True, num_workers=1)
 
-
     for item in data_loader:
-        # print(item['xyz'].size())
         print(item['index'][0])
         print(item['transform'][0])
         xyz = item['pic'][0].cpu().detach().numpy()
         display_picture(xyz)
-        # plt.waitforbuttonpress()
         break
-        # print(np.mean(xyz))
-
-        # fig = plt.figure()
-        # ax = fig.add_subplot(projection='3d')
-        # ax.scatter(xyz[0].ravel(), xyz[1].ravel(), xyz[2].ravel(), marker='o')
-
-        # plt.show ()
+       

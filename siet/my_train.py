@@ -19,7 +19,7 @@ gc.enable()
 os.environ["NVIDIA_VISIBLE_DEVICES"] = "1"
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 soft, hard = resource.getrlimit(resource.RLIMIT_DATA)
 print('Soft limit starts as  :', soft)
@@ -36,10 +36,6 @@ print('Hard limit starts as  :', hard)
 
 # exit()
 
-def display_picture(pic):
-    pic = np.transpose(pic, [1, 2, 0])
-    plt.imshow(pic)
-    plt.show()
 
 def train(args):
     model = load_model(args)
@@ -52,7 +48,7 @@ def train(args):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
-    loss_calculator = args.loss_calculator(args.loss_type)
+    loss_calculator = args.loss_calculator(args)
 
     start_epoch = 0 if args.resume is None else args.resume
 
@@ -73,7 +69,6 @@ def train(args):
 
                 optimizer.zero_grad()
                 
-                # display_picture(sample['pic'][0].cpu().detach().numpy())
                 loss = loss_calculator.calculate_train_loss(preds, sample['transform'].cuda())
 
                 optimizer.zero_grad()
@@ -94,18 +89,13 @@ def train(args):
                 
 
         if args.dump_every != 0 and (e) % args.dump_every == 0:
-            # with open('train_err.out', 'a') as f:
-            #     print("Saving checkpoint", file=f)
-            print("Saving checkpoint",  args.path_checkpoints + '{:03d}.pth'.format(e))
-            # if not os.path.isdir(args.path_checkpoints):
-            #     os.mkdir(args.path_checkpoints)
-            torch.save(model.state_dict(), args.path_checkpoints + '{:03d}.pth'.format(e))
+            print("Saving checkpoint",  os.path.join(args.path_checkpoints, f'{e:03d}.pth'))
+            torch.save(model.state_dict(), os.path.join(args.path_checkpoints, f'{e:03d}.pth'))
         
         torch.cuda.empty_cache()
-        # clean also cpu memory
           
     loss_calculator.save_results()
-    # release memory
+    print("Finished training")
 
 
 
@@ -113,29 +103,79 @@ if __name__ == '__main__':
     """
     Example usage: python train.py -iw 1032 -ih 772 -b 12 -e 500 -de 10 -lr 1e-3 -bb resnet34 -w 0.1 /path/to/MLBinsDataset/EXR/dataset.json
     """
-    # args = parse_command_line()p
-    pic_dir = '../blendre/output/'
-    csv_dir = '../blendre/matice.csv'
     args = parse_command_line()
-    args.path_pics = pic_dir
-    args.path_csv = csv_dir
+    args.path_pics = 'colorful_cube'
+    args.path_csv = 'matice.csv'
     args.input_width = 256
     args.input_height = 256
-    args.batch_size = 64
+    args.batch_size = 128
     args.workers = 4
     args.dump_every = 10
-    args.repr = 'Euler'
-    args.loss_type = 'angle'
+    args.epochs = 101
+
     loss_calcs = {
         'GS': GS_Loss_Calculator,
         'Euler': Euler_Loss_Calculator,
         'Euler_binned': Euler_binned_Loss_Calculator,
         'Quaternion': Quaternion_Loss_Calculator,
-        'Axis-angle': Axis_angle_Loss_Calculator
+        'Axis_angle': Axis_angle_Loss_Calculator
     }
-    args.loss_calculator = loss_calcs[args.repr]
-    args.path_checkpoints = f'checkpoints/{args.repr}/{args.loss_type}/'
-    # args.resume = 70
-    args.epochs = 101
 
+    args.path_pics = 'cool_cube'
+    args.repr = 'Euler_binned'
+    args.loss_type = 'elements'
+    args.loss_calculator = loss_calcs[args.repr]
+    args.path_checkpoints = os.path.join('siet', 'training_data', args.path_pics, 'checkpoints', args.repr, args.loss_type)
+    args.resume = 80
     train(args)
+
+
+
+
+
+
+
+
+
+    reprs = [
+        'GS',
+        'Euler',
+        # 'Euler_binned',
+        # 'Quaternion',
+        # 'Axis_Angle',
+        # 'Axis_Angle_binned',
+        # 'Stereographic',
+        # 'Matrix'
+    ]
+    losses = [
+            'angle', 
+            'elements'
+              ]
+
+    datasets = [
+            'cool_cube', 
+            # 'big_hole_cube', 
+            # 'dotted_cube', 
+            'colorful_cube', 
+            # 'one_color_cube'
+            ]
+
+    # for dset in datasets:
+    #     for r in reprs:
+    #         for l in losses:
+    #             args.path_checkpoints = os.path.join('siet', 'training_data', dset, 'checkpoints', r, l)
+    #             args.path_pics = dset
+    #             args.repr = r
+    #             args.loss_type = l
+    #             args.loss_calculator = loss_calcs[args.repr] 
+    #             try:
+    #                 train(args) 
+    #             except Exception as e:
+    #                 print('Error in ', args.path_checkpoints)
+    #                 print(e)
+    #                 print('moving on')
+    #                 with open ('errors.out', 'a') as f:
+    #                     print('Error in ', args.path_checkpoints, file=f)
+    #                     print(e, file=f)
+    #                     print('moving on', file=f)
+    #                 continue

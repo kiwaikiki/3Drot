@@ -42,8 +42,10 @@ def calculate_eRE(R_gt, R_est):
     Calculate the angle between two rotation matrices R_gt and R_est
     ''' 
     # angles = np..apply_along_axis(lambda Rt, Re: rotation_angle(Rt.T @ Re), 1, R_gt, R_est)
-    angles = torch.stack([rotation_angle(R_gt[i].T @ R_est[i]) for i in range(len(R_gt))])
-    return torch.mean(angles).cuda()
+    angls = [rotation_angle(torch.matmul(R_gt[i].T, R_est[i])) for i in range(len(R_gt))]
+    angles = torch.stack([rotation_angle(torch.matmul(R_gt[i].T, R_est[i])) for i in range(len(R_gt))])
+    # print(angles)
+    return torch.mean(angles)
 
 def angles2Rotation_Matrix(angles):
     '''
@@ -66,9 +68,8 @@ def angles2Rotation_Matrix_for_batches(angles):
     # matrices = torch.stack([angles2Rotation_Matrix([x[i], y[i], z[i]]) for i in range(len(x))])
     # return matrices
 
-    q = kornia.geometry.conversions.quaternion_from_euler(angles.T[0], angles.T[1], angles.T[2])
-    print(q)
-    return kornia.geometry.conversions.quaternion_to_rotation_matrix(torch.tensor(q).cuda())
+    q = torch.stack(kornia.geometry.conversions.quaternion_from_euler(angles.T[0], angles.T[1], angles.T[2])).T
+    return kornia.geometry.conversions.quaternion_to_rotation_matrix(q)
 
 def rotation_Matrix2angles(R):
     '''
@@ -79,7 +80,7 @@ def rotation_Matrix2angles(R):
     # z = torch.arctan2(R[1, 0], R[0, 0])
     # return torch.tensor([x, y, z], requires_grad=True).cuda()
     q = kornia.geometry.conversions.rotation_matrix_to_quaternion(R)
-    return kornia.geometry.conversions.euler_from_quaternion(q)
+    return kornia.geometry.conversions.euler_from_quaternion(*q)
 
 def rotation_Matrix2angle_bins(R, bins=360):
     '''
@@ -92,7 +93,18 @@ def rotation_Matrix2angle_bins(R, bins=360):
     y[int(torch.rad2deg(y_angle))] = 1
     z = torch.zeros(bins)
     z[int(torch.rad2deg(z_angle))] = 1
-    return torch.stack([x, y, z]).cuda()
+    return torch.stack([x, y, z])
+
+def angle_bins2rotation_Matrix(angles):
+    '''
+    Convert angle bins to a rotation matrix
+    '''
+    x, y, z = torch.argmax(angles[:,0], axis=0), torch.argmax(angles[:,1], axis=0), torch.argmax(angles[:,2],axis=0)
+    x_angle = torch.deg2rad(x)
+    y_angle = torch.deg2rad(y)
+    z_angle = torch.deg2rad(z)
+    # print(x_angle)
+    return angles2Rotation_Matrix_for_batches(torch.stack([x_angle, y_angle, z_angle]).T)
 
 def GS_transform(preds):
     '''
@@ -100,12 +112,14 @@ def GS_transform(preds):
     '''
     pred_z, pred_y = preds
     z = pred_z
-    z = z / torch.linalg.norm(z)
-    
+    norm_z = torch.linalg.norm(z, axis=1).repeat(3, 1).T
+    z = z / norm_z
+
     y = pred_y
     # y = y - torch.dot(z, y)*z
     y = y - torch.sum(z * y, dim=-1, keepdim=True) * z
-    y = y / torch.linalg.norm(y)
+    norm_y = torch.linalg.norm(y, axis=1).repeat(3, 1).T
+    y = y / norm_y
 
     x = torch.linalg.cross(y, z)
 
@@ -130,8 +144,8 @@ def rotation_Matrix2quaternion(R):
 
 
 class Loss_Calculator:
-    def __init__(self, loss_type='angle'):
-        self.loss_type = loss_type
+    def __init__(self, args):
+        self.loss_type = args.loss_type
 
         self.loss_running = torch.from_numpy(np.array([0], dtype=np.float32)).cuda()
         
@@ -162,8 +176,8 @@ class Loss_Calculator:
         
 
 class GS_Loss_Calculator(Loss_Calculator):
-    def __init__(self, loss_type='angle'):
-        super().__init__(loss_type)
+    def __init__(self, args):
+        super().__init__(args)
         self.loss_z_running = torch.from_numpy(np.array([0], dtype=np.float32)).cuda()
         self.loss_y_running = torch.from_numpy(np.array([0], dtype=np.float32)).cuda()
         
@@ -175,16 +189,16 @@ class GS_Loss_Calculator(Loss_Calculator):
                         'elements': (self.calculate_elements_train_loss,
                                     self.calculate_elements_val_loss)}
 
-        self.folder = 'results/GS/' + loss_type + '/'
+        self.folder = f'siet/training_data/{args.path_pics}/results/GS/{args.loss_type}/'
         self.train_file = self.folder + 'train_err.out'
         self.val_file = self.folder + 'val_err.out'
         # self.all_running = self.folder + 'train_err_running2.out'
         # self.just_ends_file = self.folder + 'train_err_just_ends2.out'
 
     def calculate_angle_loss(self, preds, true_transform):
-        transform = GS_transform(preds)
         true_transfrm = true_transform.float()
-        loss = torch.mean(calculate_eRE(true_transfrm, transform.cuda()))
+        transform = GS_transform(preds)
+        loss = calculate_eRE(true_transfrm, transform.cuda()).cuda()
 
         self.loss_running = 0.9 * self.loss_running + 0.1 * loss
 
@@ -249,15 +263,15 @@ class GS_Loss_Calculator(Loss_Calculator):
     
 
 class Euler_Loss_Calculator(Loss_Calculator):
-    def __init__(self, loss_type='angle'):
-        super().__init__(loss_type)
+    def __init__(self, args):
+        super().__init__(args)
 
         self.function_dict = {'angle': (self.calculate_angle_loss, 
                                     self.calculate_val_angle_loss),
                         'elements': (self.calculate_elements_loss,
                                     self.calculate_val_elements_loss)}
 
-        self.folder = f'results/Euler/{loss_type}/'
+        self.folder = f'siet/training_data/{args.path_pics}/results/Euler/{args.loss_type}/'
         self.train_file = self.folder + 'train_err2.out'
         self.val_file = self.folder + 'val_err2.out'
 
@@ -277,7 +291,10 @@ class Euler_Loss_Calculator(Loss_Calculator):
            
     
     def calculate_elements_loss(self, preds, true_transform):
-        gt_angles = torch.stack([rotation_Matrix2angles(true_transform[i]) for i in range(len(true_transform))])
+        # gt_angles = torch.stack([rotation_Matrix2angles(true_transform[i]) for i in range(len(true_transform))])
+        gt_angles = kornia.geometry.conversions.rotation_matrix_to_quaternion(true_transform)
+        gt_angles = kornia.geometry.conversions.euler_from_quaternion(gt_angles.T[0], gt_angles.T[1], gt_angles.T[2], gt_angles.T[3])
+        gt_angles = torch.stack(gt_angles).T
 
         loss = torch.mean(torch.abs(preds - gt_angles)).cuda()
 
@@ -299,18 +316,35 @@ class Euler_Loss_Calculator(Loss_Calculator):
 
 
 class Euler_binned_Loss_Calculator(Loss_Calculator):
-    def __init__(self, loss_type='angle'):
-        super().__init__(loss_type)
+    def __init__(self, args):
+        super().__init__(args)
 
         self.function_dict = {
                         'elements': (self.calculate_elements_loss,
-                                    self.calculate_val_elements_loss)
+                                    self.calculate_val_elements_loss),
+                        'angle': (self.calculate_angle_loss,
+                                    self.calculate_val_angle_loss)
                             }
         self.loss_f = torch.nn.CrossEntropyLoss() 
 
-        self.folder = f'results/Euler_binned/{loss_type}/'
+        self.folder = f'siet/training_data/{args.path_pics}/results/Euler_binned/{args.loss_type}/'
         self.train_file = self.folder + 'train_err.out'
         self.val_file = self.folder + 'val_err.out'
+
+    def calculate_angle_loss(self, pred, gt):
+        pred_R = angle_bins2rotation_Matrix(pred).cuda()
+        true_transfrm = gt.float()
+
+        loss = calculate_eRE(true_transfrm, pred_R).cuda()
+        self.loss_running = 0.9 * self.loss_running + 0.1 * loss
+
+        print(f'Running Loss: {self.loss_running.item()}')
+        return loss
+    
+    def calculate_val_angle_loss(self, pred, gt):
+        self.val_losses.append(self.calculate_angle_loss(pred, gt).detach().item())
+
+
     
     def calculate_elements_loss(self, preds, true_transform):
         gt_angles = torch.stack([rotation_Matrix2angle_bins(true_transform[i]) for i in range(len(true_transform))])
@@ -335,15 +369,15 @@ class Euler_binned_Loss_Calculator(Loss_Calculator):
 
 
 class Quaternion_Loss_Calculator(Loss_Calculator):
-    def __init__(self, loss_type='angle'):
-        super().__init__(loss_type)
+    def __init__(self, args):
+        super().__init__(args)
 
         self.function_dict = {'angle': (self.calculate_angle_loss, 
                                     self.calculate_val_angle_loss),
                         'elements': (self.calculate_elements_loss,
                                     self.calculate_val_elements_loss)}
 
-        self.folder = f'results/Quaternion/{loss_type}/'
+        self.folder = f'siet/training_data/{args.path_pics}/results/Quaternion/{args.loss_type}/'
         self.train_file = self.folder + 'train_err.out'
         self.val_file = self.folder + 'val_err.out'
     
@@ -382,8 +416,8 @@ class Quaternion_Loss_Calculator(Loss_Calculator):
     
 
 class Axis_angle_Loss_Calculator(Loss_Calculator):
-    def __init__(self, loss_type='angle'):
-        super().__init__(loss_type)
+    def __init__(self, args):
+        super().__init__(args)
 
         self.function_dict = {'angle': (self.calculate_angle_loss, 
                                     self.calculate_val_angle_loss),
@@ -391,8 +425,7 @@ class Axis_angle_Loss_Calculator(Loss_Calculator):
                                     self.calculate_val_elements_loss)}
 
 
-
-        self.folder = f'results/Axis-angle/{loss_type}/'
+        self.folder = f'siet/training_data/{args.path_pics}/results/Axis_angle/{args.loss_type}/'
         self.train_file = self.folder + 'train_err.out'
         self.val_file = self.folder + 'val_err.out'
     
