@@ -6,7 +6,7 @@ from io import StringIO   # StringIO behaves like a file object
 import time
 import pandas as pd
 import multiprocessing as mp
-from sphere import geodesic_distance, load_blobs, is_in_blob
+from sphere import geodesic_distance, load_blobs, is_in_blob, is_in_blob_matrix, load_matrices, rotation_matrix_from_vectors
 
 PROJECT_DIR = '/home/viki/FMFI/bc/blendre/'
 os.chdir(PROJECT_DIR)
@@ -47,15 +47,15 @@ class PictureGenerator:
                 self.obj.rotation_mode = "XYZ"
                 self.obj.rotation_euler = angle
                 self.obj.rotation_mode  = previous_mode
-
+                bpy.context.scene.render.filepath = os.path.join(output_dir, f"{id:04d}.png")
+                bpy.ops.render.render(write_still=True)
                 if matrix_file.endswith('.csv'):
                     matrix = matrix2csv(self.obj.matrix_world)
                     print(f'{id-1},{matrix}', file = f)
                 else:  
                     matrix = matrix2string(self.obj.matrix_world) 
                     print(f'{id-1}\n{matrix}', file = f)
-                bpy.context.scene.render.filepath = os.path.join(output_dir, f"{id:04d}.png")
-                bpy.ops.render.render(write_still=True)
+               
 
         return (f'Elapsed time: {time.time() - start_time}')
 
@@ -86,6 +86,60 @@ class PictureGenerator:
                     generated += 1
 
             print(f'Elapsed time: {time.time() - start_time}')
+
+    def render_blobs_matrix(self, train_dir, val_dir, test_dir, matrix_file, blobs, number_train, number_val, number_test):
+        with open(f'{test_dir}/{matrix_file}', 'w') as f:
+            pass
+        with open(f'{train_dir}/{matrix_file}', 'w') as f:
+            pass
+        with open(f'{val_dir}/{matrix_file}', 'w') as f:
+            pass
+
+        start_time = time.time()  
+        generated_test = 0
+        generated_train = 0
+        generated_val = 0
+        while generated_test < number_test or generated_train < number_train or generated_val < number_val:
+            angle = (np.random.uniform(0, 2*np.pi), 
+                    np.random.uniform(0, 2*np.pi), 
+                    np.random.uniform(0, 2*np.pi))
+            previous_mode = self.obj.rotation_mode 
+            self.obj.rotation_mode = "XYZ"
+            self.obj.rotation_euler = angle
+            self.obj.rotation_mode  = previous_mode
+
+            bpy.context.scene.render.filepath = os.path.join(train_dir, f"bs.png")
+            bpy.ops.render.render(write_still=True)
+            
+            # extract only first 3 rows and columns into new matrix
+            matrix = np.array(self.obj.matrix_world)[:3,:3]
+            matrix_csv = matrix2csv(matrix)
+            # matrix = matrix2csv(self.obj.matrix_world)
+            
+            if is_in_blob_matrix(matrix, blobs, 50):
+                if generated_test < number_test:   
+                    with open(f'{test_dir}/{matrix_file}', 'a') as f:
+                        print(f'{generated_test},{matrix_csv}', file = f)
+                    bpy.context.scene.render.filepath = os.path.join(test_dir, f"{generated_test:04d}.png")
+                    bpy.ops.render.render(write_still=True)
+                    generated_test += 1
+
+            elif generated_train < number_train:
+                with open(f'{train_dir}/{matrix_file}', 'a') as f:
+                    print(f'{generated_train},{matrix_csv}', file = f)
+                bpy.context.scene.render.filepath = os.path.join(train_dir, f"{generated_train:04d}.png")
+                bpy.ops.render.render(write_still=True)
+                generated_train += 1
+
+            elif generated_val < number_val:
+                with open(f'{val_dir}/{matrix_file}', 'a') as f:
+                    print(f'{generated_val},{matrix_csv}', file = f)
+                bpy.context.scene.render.filepath = os.path.join(val_dir, f"{generated_val:04d}.png")
+                bpy.ops.render.render(write_still=True)
+                generated_val += 1
+
+                
+        print(f'Elapsed time: {time.time() - start_time}')
 
 
     def add_texture(self, texture_file=None):
@@ -166,7 +220,8 @@ def matrix2csv(matrix):
     discards last row and column(translation).
     order first row, second row
     '''
-    return ','.join([','.join(map(str, row[:-1])) for row in matrix[:-1]])
+    # np.savetxt('matrix.csv', matrix[:-1,:-1], delimiter=',')
+    return ','.join([','.join(map(str, row)) for row in matrix])
 
 
 def rotation_Matrix2angles(R):
@@ -182,10 +237,15 @@ def rotation_Matrix2angles(R):
 if __name__ == "__main__":
     gen = PictureGenerator('modely/kocky_texture.fbx', (256, 256), 'textury/cool_voronoi.png')
     # blobs = load_blobs('blobs.csv')
-    # blobs = [(np.array([1, 0, 0]), 0.5)]
-    gen.render_object_from_angles('cool_cube/train', 'matice.csv', 8000)
-    gen.render_object_from_angles('cool_cube/val', 'matice.csv', 2000)
-    # gen.render_object_from_angles('cool_cube/test', 'matice.csv', 1000)
+    # blobs = [(np.array([1, 0, 0]), 1)]
+    # matrices = load_matrices('matrices.csv')
+    matrices = [rotation_matrix_from_vectors(np.array([1, 0, 0]), np.array([0, -1, 0]))]
+    # gen.render_object_from_angles('colorful_cube/train', 'matice.csv', 8000)
+    # gen.render_object_from_angles('colorful_cube/val', 'matice.csv', 2000)
+    # gen.render_object_from_angles('colorful_cube/test', 'matice.csv', 1000)
+
+    gen.render_blobs_matrix('cube_quad/train', 'cube_quad/val', 'cube_quad/test', 'matice.csv', matrices, 8000, 2000, 1000)
+     #4717.625327348709 - dotted
 #     # gen.paralel_rendering()
 # # check
 # #  
