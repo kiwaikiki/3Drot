@@ -5,13 +5,25 @@ import cv2
 import numpy as np
 import kornia
 
-from my_loss import angles2Rotation_Matrix, GS_transform, quaternion2Rotation_Matrix
+from my_loss import angles2Rotation_Matrix, quaternion2Rotation_Matrix, angle_bins2rotation_Matrix
 from my_dataset import Dataset
 from my_network import parse_command_line, load_model, Network_GS
 from scipy.spatial.transform import Rotation
 from torch.utils.data import DataLoader
 from shutil import copyfile
 
+def GS_transform(preds):
+    pred_z, pred_y = preds
+    z = pred_z / torch.linalg.norm(pred_z)
+    y = pred_y - torch.dot(z, pred_y)*z
+    y = y / torch.linalg.norm(y)
+    x = torch.linalg.cross(y, z)
+
+    transform = torch.zeros([3, 3])
+    transform[:, 0] = x
+    transform[:, 1] = y
+    transform[:, 2] = z
+    return transform
 
 def infer(args):
     model = load_model(args)
@@ -31,7 +43,7 @@ def infer(args):
                 gt_transforms = sample['transform']
     
                 for i in range(args.batch_size):
-                    index = sample['index'][i].item()
+                    index = sample['index'][i].item()   
                     print(index)
                     print(20  * '*')
                     print("GT:")
@@ -39,9 +51,10 @@ def infer(args):
                     print("Det: ", np.linalg.det(gt_transform))
                     print(gt_transform)
                     
-                    transform = GS_transform((preds[0][i],preds[1][i])).cpu().numpy()[0]
-                    # transform = angles2Rotation_Matrix(preds[i]).cpu().numpy()
-                    # transform = quaternion2Rotation_Matrix(preds[i]).cpu().numpy()
+                    if args.repr == 'GS':
+                        transform = args.repr_f((preds[0][i],preds[1][i])).cpu().numpy()
+                    else:
+                        transform = args.repr_f(preds[i]).cpu().numpy()
 
                     print("Predict:")
                     print("Det: ", np.linalg.det(transform))
@@ -54,20 +67,28 @@ if __name__ == '__main__':
     Example usage: python infer.py --no_preload -r 200 -iw 258 -ih 193 -b 32 /path/to/MLBinsDataset/EXR/dataset.json
     """
     # import os
-    pic_dir = 'cool_cube'
-    csv_dir = 'matice.csv'
     args = parse_command_line()
-    args.path_pics = pic_dir
-    args.path_csv = csv_dir
+    args.path_csv = 'matice.csv'
     args.input_width = 256
     args.input_height = 256
     args.batch_size = 4
     args.workers = 4
+
+    repr_func = {
+        'GS' : GS_transform,
+        'Euler' : angles2Rotation_Matrix,
+        'Quaternion' : quaternion2Rotation_Matrix,
+        'Euler_binned' : angle_bins2rotation_Matrix
+    }
+
+    args.path_pics = 'cube_big_hole'
     args.repr = 'GS'
-    args.path = args.repr + '/angle/'
-    for i in range(100, 101, 10):
-        args.path_checkpoint = f'siet/training_data/{pic_dir}/checkpoints/{args.path}checkpoint_{i:03d}.pth'
-        args.path_infer = f'siet/training_data/{pic_dir}/inferences/{args.path}infer_results{i:03d}.csv'
+    args.loss_type = 'elements'
+    args.path = os.path.join(args.repr, args.loss_type)
+    args.repr_f = repr_func[args.repr]
+    for i in range(0, 101, 10):
+        args.path_checkpoint = f'siet/training_data/{args.path_pics}/checkpoints/{args.path}/{i:03d}.pth'
+        args.path_infer = f'siet/training_data/{args.path_pics}/inferences/{args.path}/infer_results{i:03d}.csv'
         print(args.path_checkpoint)
         if not os.path.exists(args.path_checkpoint):
             print(f'Path {args.path_checkpoint} does not exist')

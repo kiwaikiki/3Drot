@@ -11,11 +11,11 @@ reprs = [
     ]
 losses = ['angle', 'elements']
 
-datasets = ['cool_cube', 
-            'big_hole_cube', 
-            'dotted_cube', 
-            'colorful_cube', 
-            'one_color_cube']
+datasets = ['cube_cool', 
+            'cube_big_hole', 
+            'cube_dotted', 
+            'cube_colorful', 
+            'cube_one_color']
 
 directory = 'training_data'
 if not os.path.exists(directory):

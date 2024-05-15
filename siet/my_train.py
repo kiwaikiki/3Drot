@@ -19,7 +19,7 @@ gc.enable()
 os.environ["NVIDIA_VISIBLE_DEVICES"] = "1"
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-# device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 soft, hard = resource.getrlimit(resource.RLIMIT_DATA)
 print('Soft limit starts as  :', soft)
@@ -121,27 +121,21 @@ if __name__ == '__main__':
         'Axis_angle': Axis_angle_Loss_Calculator
     }
 
-    args.path_pics = 'cool_cube'
-    args.repr = 'Euler_binned'
-    args.loss_type = 'elements'
-    args.loss_calculator = loss_calcs[args.repr]
-    args.path_checkpoints = os.path.join('siet', 'training_data', args.path_pics, 'checkpoints', args.repr, args.loss_type)
-    args.resume = 80
-    train(args)
-
-
-
-
-
-
+    # args.path_pics = 'cool_cube'
+    # args.repr = 'Euler'
+    # args.loss_type = 'angle'
+    # args.loss_calculator = loss_calcs[args.repr]
+    # args.path_checkpoints = os.path.join('siet', 'training_data', args.path_pics, 'checkpoints', args.repr, args.loss_type)
+    # args.resume = 90
+    # train(args)
 
 
 
     reprs = [
         'GS',
         'Euler',
-        # 'Euler_binned',
-        # 'Quaternion',
+        'Euler_binned',
+        'Quaternion',
         # 'Axis_Angle',
         # 'Axis_Angle_binned',
         # 'Stereographic',
@@ -153,29 +147,29 @@ if __name__ == '__main__':
               ]
 
     datasets = [
-            'cool_cube', 
-            # 'big_hole_cube', 
-            # 'dotted_cube', 
-            'colorful_cube', 
-            # 'one_color_cube'
+            'cube_cool', 
+            'cube_big_hole', 
+            'cube_dotted', 
+            'cube_colorful', 
+            'cube_one_color'
             ]
 
-    # for dset in datasets:
-    #     for r in reprs:
-    #         for l in losses:
-    #             args.path_checkpoints = os.path.join('siet', 'training_data', dset, 'checkpoints', r, l)
-    #             args.path_pics = dset
-    #             args.repr = r
-    #             args.loss_type = l
-    #             args.loss_calculator = loss_calcs[args.repr] 
-    #             try:
-    #                 train(args) 
-    #             except Exception as e:
-    #                 print('Error in ', args.path_checkpoints)
-    #                 print(e)
-    #                 print('moving on')
-    #                 with open ('errors.out', 'a') as f:
-    #                     print('Error in ', args.path_checkpoints, file=f)
-    #                     print(e, file=f)
-    #                     print('moving on', file=f)
-    #                 continue
+    for dset in datasets:
+        for r in reprs:
+            for l in losses:
+                args.path_checkpoints = os.path.join('siet', 'training_data', dset, 'checkpoints', r, l)
+                args.path_pics = f'datasets/{dset}'
+                args.repr = r
+                args.loss_type = l
+                args.loss_calculator = loss_calcs[args.repr] 
+                try:
+                    train(args) 
+                except Exception as e:
+                    print('Error in ', args.path_checkpoints)
+                    print(e)
+                    print('moving on')
+                    with open ('errors.out', 'a') as f:
+                        print('Error in ', args.path_checkpoints, file=f)
+                        print(e, file=f)
+                        print('moving on', file=f)
+                    continue

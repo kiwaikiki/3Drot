@@ -47,7 +47,6 @@ class Network_GS(torch.nn.Module):
         #                                 torch.nn.LeakyReLU(),
         #                                 torch.nn.Linear(64, 3))
 
-
         # self.fc_t = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
         #                                 torch.nn.LeakyReLU(),
         #                                 torch.nn.Linear(128, 64),
@@ -82,12 +81,13 @@ class Network_Euler(torch.nn.Module):
 
         self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
 
-        
-        self.angles = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(128, 64),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(64, 3))
+        self.angles = torch.nn.Linear(last_feat, 3) #staci iba toto mozno
+
+        # self.angles = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(128, 64),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(64, 3))
 
     def forward(self, x):
         # x = self.init_conv(x)
@@ -119,7 +119,8 @@ class Network_Euler_Binned(torch.nn.Module):
 
         self.n_bins = 360
 
-        # make softmax for each angle
+        # self.angles = torch.nn.Linear(last_feat, 3*self.n_bins)
+
         self.angles = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
                                         torch.nn.LeakyReLU(),
                                         torch.nn.Linear(128, 64),
@@ -157,12 +158,13 @@ class Network_Quaternion(torch.nn.Module):
 
         self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
 
+        self.q = torch.nn.Linear(last_feat, 4) #staci iba toto mozno
         
-        self.q = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(128, 64),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(64, 4))
+        # self.q = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(128, 64),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(64, 4))
 
     def forward(self, x):
         # x = self.init_conv(x)
@@ -189,12 +191,30 @@ class Network_Axis_Angle_3D(torch.nn.Module):
 
         self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
 
-        self.axis = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(128, 64),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(64, 3))
+        self.axis = torch.nn.Linear(last_feat, 3) #staci iba toto mozno
+
+        # self.axis = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(128, 64),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(64, 3))
         
+        
+    def forward(self, x):
+        # x = self.init_conv(x)
+        x = self.backbone(x)
+
+        # Global Avg Pool
+        x = torch.mean(x, -1)
+        x = torch.mean(x, -1)
+
+        # Max pooling
+        # x = torch.max(x, -1)[0]
+        # x = torch.max(x, -1)[0]
+
+        axis = self.axis(x)
+
+        return axis
         
 
 class Network_Axis_Angle_4D(torch.nn.Module):
@@ -207,18 +227,21 @@ class Network_Axis_Angle_4D(torch.nn.Module):
 
         self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
 
-        
-        self.axis = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(128, 64),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(64, 3))
+        self.axis = torch.nn.Linear(last_feat, 3) #staci iba toto mozno
+        self.angle = torch.nn.Linear(last_feat, 1) #staci iba toto mozno
 
-        self.angle = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(128, 64),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(64, 1))
+        
+        # self.axis = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(128, 64),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(64, 3))
+
+        # self.angle = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(128, 64),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(64, 1))
 
     def forward(self, x):
         # x = self.init_conv(x)
@@ -250,17 +273,20 @@ class Network_Axis_Angle_Binned(torch.nn.Module):
 
         self.n_bins = 360/5
 
-        self.axis = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(128, 64),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(64, 3))
+        self.axis = torch.nn.Linear(last_feat, 3) #staci iba toto mozno
+        self.angle = torch.nn.Linear(last_feat, 1*self.n_bins)
+
+        # self.axis = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(128, 64),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(64, 3))
         
-        self.angle = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(128, 64),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(64, 1*self.n_bins))
+        # self.angle = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(128, 64),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(64, 1*self.n_bins))
 
         
     def forward(self, x):
@@ -277,9 +303,7 @@ class Network_Axis_Angle_Binned(torch.nn.Module):
 
         axis = self.axis(x)
         
-        angle = self.angle(x)
-        angle = self.softmax(angle)
-        angle = angle.view(-1, 1, self.n_bins)
+        angle = self.angle(x).view(-1, 1, self.n_bins)
 
         return axis, angle
     
@@ -294,12 +318,13 @@ class Network_Stereographic(torch.nn.Module):
 
         self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
 
-        
-        self.stereo = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(128, 64),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(64, 5))
+        self.stereo = torch.nn.Linear(last_feat, 5) #staci iba toto mozno
+
+        # self.stereo = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(128, 64),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(64, 5))
 
     def forward(self, x):
         # x = self.init_conv(x)
@@ -328,12 +353,13 @@ class Network_Matrix(torch.nn.Module):
 
         self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
 
+        self.matrix = torch.nn.Linear(last_feat, 9) #staci iba toto mozno
         
-        self.matrix = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(128, 64),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(64, 9))
+        # self.matrix = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(128, 64),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(64, 9))
     
     def forward(self, x):
         # x = self.init_conv(x)

@@ -149,6 +149,7 @@ class Loss_Calculator:
 
         self.loss_running = torch.from_numpy(np.array([0], dtype=np.float32)).cuda()
         
+        self.l2loss_f = torch.nn.MSELoss()
         self.train_loss_all = []
         self.val_loss_all = []
 
@@ -187,13 +188,26 @@ class GS_Loss_Calculator(Loss_Calculator):
         self.function_dict = {'angle': (self.calculate_angle_loss, 
                                     self.calculate_val_angle_loss),
                         'elements': (self.calculate_elements_train_loss,
-                                    self.calculate_elements_val_loss)}
-
+                                    self.calculate_elements_val_loss),
+                        'L2': (self.calculate_L2_loss, self.calculate_val_L2_loss)
+        }
         self.folder = f'siet/training_data/{args.path_pics}/results/GS/{args.loss_type}/'
         self.train_file = self.folder + 'train_err.out'
         self.val_file = self.folder + 'val_err.out'
         # self.all_running = self.folder + 'train_err_running2.out'
         # self.just_ends_file = self.folder + 'train_err_just_ends2.out'
+
+    def calculate_L2_loss(self, preds, true_transform):
+        transform = GS_transform(preds)
+        loss = self.l2loss_f(transform, true_transform)
+
+        self.loss_running = 0.9 * self.loss_running + 0.1 * loss
+
+        print(f'Running Loss: {self.loss_running.item()}')
+        return loss
+    
+    def calculate_val_L2_loss(self, preds, true_transform):
+        self.val_losses.append(self.calculate_L2_loss(preds, true_transform).detach().item())
 
     def calculate_angle_loss(self, preds, true_transform):
         true_transfrm = true_transform.float()
@@ -272,8 +286,8 @@ class Euler_Loss_Calculator(Loss_Calculator):
                                     self.calculate_val_elements_loss)}
 
         self.folder = f'siet/training_data/{args.path_pics}/results/Euler/{args.loss_type}/'
-        self.train_file = self.folder + 'train_err2.out'
-        self.val_file = self.folder + 'val_err2.out'
+        self.train_file = self.folder + 'train_err.out'
+        self.val_file = self.folder + 'val_err.out'
 
 
     def calculate_angle_loss(self, pred, gt):
@@ -343,8 +357,6 @@ class Euler_binned_Loss_Calculator(Loss_Calculator):
     
     def calculate_val_angle_loss(self, pred, gt):
         self.val_losses.append(self.calculate_angle_loss(pred, gt).detach().item())
-
-
     
     def calculate_elements_loss(self, preds, true_transform):
         gt_angles = torch.stack([rotation_Matrix2angle_bins(true_transform[i]) for i in range(len(true_transform))])
