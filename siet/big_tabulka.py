@@ -1,3 +1,5 @@
+import pandas as pd
+
 reprs = [
     'GS',
     'Euler',
@@ -15,10 +17,10 @@ losses = [
 
 datasets = [
         'cube_cool', 
-        # 'cube_big_hole', 
-        # 'cube_dotted', 
-        'cube_colorful', 
-        'cube_one_color'
+        'cube_big_hole', 
+        'cube_dotted', 
+        # 'cube_colorful', 
+        # 'cube_one_color'
         ]
 
 

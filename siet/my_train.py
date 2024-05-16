@@ -19,7 +19,7 @@ gc.enable()
 os.environ["NVIDIA_VISIBLE_DEVICES"] = "1"
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 soft, hard = resource.getrlimit(resource.RLIMIT_DATA)
 print('Soft limit starts as  :', soft)
@@ -49,6 +49,8 @@ def train(args):
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
     loss_calculator = args.loss_calculator(args)
+    if args.resume is not None:
+        loss_calculator.load_results(args.resume)
 
     start_epoch = 0 if args.resume is None else args.resume
 
@@ -91,6 +93,7 @@ def train(args):
         if args.dump_every != 0 and (e) % args.dump_every == 0:
             print("Saving checkpoint",  os.path.join(args.path_checkpoints, f'{e:03d}.pth'))
             torch.save(model.state_dict(), os.path.join(args.path_checkpoints, f'{e:03d}.pth'))
+            loss_calculator.save_results(e)
         
         torch.cuda.empty_cache()
           
@@ -109,7 +112,7 @@ if __name__ == '__main__':
     args.input_width = 256
     args.input_height = 256
     args.batch_size = 128
-    args.workers = 4
+    args.workers = 8
     args.dump_every = 10
     args.epochs = 101
 
@@ -118,16 +121,17 @@ if __name__ == '__main__':
         'Euler': Euler_Loss_Calculator,
         'Euler_binned': Euler_binned_Loss_Calculator,
         'Quaternion': Quaternion_Loss_Calculator,
-        'Axis_angle': Axis_angle_Loss_Calculator
+        'Axis_angle': Axis_Angle_3D_Loss_Calculator
     }
 
-    # args.path_pics = 'cool_cube'
-    # args.repr = 'Euler'
-    # args.loss_type = 'angle'
-    # args.loss_calculator = loss_calcs[args.repr]
-    # args.path_checkpoints = os.path.join('siet', 'training_data', args.path_pics, 'checkpoints', args.repr, args.loss_type)
-    # args.resume = 90
-    # train(args)
+    args.dataset = 'cube_cool'
+    args.path_pics = f'datasets/{args.dataset}'
+    args.repr = 'Euler'
+    args.loss_type = 'angle'
+    args.loss_calculator = loss_calcs[args.repr]
+    args.path_checkpoints = os.path.join('siet', 'training_data', args.dataset, 'checkpoints', args.repr, args.loss_type)
+    # args.resume = 
+    train(args)
 
 
 
@@ -154,22 +158,34 @@ if __name__ == '__main__':
             'cube_one_color'
             ]
 
-    for dset in datasets:
-        for r in reprs:
-            for l in losses:
-                args.path_checkpoints = os.path.join('siet', 'training_data', dset, 'checkpoints', r, l)
-                args.path_pics = f'datasets/{dset}'
-                args.repr = r
-                args.loss_type = l
-                args.loss_calculator = loss_calcs[args.repr] 
-                try:
-                    train(args) 
-                except Exception as e:
-                    print('Error in ', args.path_checkpoints)
-                    print(e)
-                    print('moving on')
-                    with open ('errors.out', 'a') as f:
-                        print('Error in ', args.path_checkpoints, file=f)
-                        print(e, file=f)
-                        print('moving on', file=f)
-                    continue
+    alldone = [
+        ('cube_cool', 'Euler_binned', 'elements'),
+        ('cube_big_hole', 'Euler', 'elements'), #mozno so nn.seq
+        ('cube_big_hole', 'GS', 'elements'),
+        ('cube_big_hole', 'GS', 'angle'),
+
+
+    ]
+
+    # for dset in datasets:
+    #     for r in reprs:
+    #         for l in losses:
+    #             if (dset, r, l) in alldone:
+    #                 continue
+    #             args.path_checkpoints = os.path.join('siet', 'training_data', dset, 'checkpoints', r, l)
+    #             args.path_pics = f'datasets/{dset}'
+    #             args.dataset = dset
+    #             args.repr = r
+    #             args.loss_type = l
+    #             args.loss_calculator = loss_calcs[args.repr] 
+    #             try:
+    #                 train(args) 
+    #             except Exception as e:
+    #                 print('Error in ', args.path_checkpoints)
+    #                 print(e)
+    #                 print('moving on')
+    #                 with open ('errors.out', 'a') as f:
+    #                     print('Error in ', args.path_checkpoints, file=f)
+    #                     print(e, file=f)
+    #                     print('moving on', file=f)
+    #                 continue

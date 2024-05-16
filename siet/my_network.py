@@ -84,7 +84,7 @@ class Network_Euler(torch.nn.Module):
         self.angles = torch.nn.Linear(last_feat, 3) #staci iba toto mozno
 
         # self.angles = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
-        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.LeakyReL=U(),
         #                                 torch.nn.Linear(128, 64),
         #                                 torch.nn.LeakyReLU(),
         #                                 torch.nn.Linear(64, 3))
@@ -119,13 +119,13 @@ class Network_Euler_Binned(torch.nn.Module):
 
         self.n_bins = 360
 
-        # self.angles = torch.nn.Linear(last_feat, 3*self.n_bins)
+        self.angles = torch.nn.Linear(last_feat, 3*self.n_bins)
 
-        self.angles = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(128, 64),
-                                        torch.nn.LeakyReLU(),
-                                        torch.nn.Linear(64, 3*self.n_bins))
+        # self.angles = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(128, 64),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(64, 3*self.n_bins))
         
         
     def forward(self, x):
@@ -423,7 +423,7 @@ def load_model(args):
     model = repr_network(backbone=args.backbone).cuda()
     
     if args.resume is not None:
-        sd_path = f'siet/training_data/{args.path_pics}/checkpoints/{args.repr}/{args.loss_type}/{args.resume:03d}.pth'
+        sd_path = f'siet/training_data/{args.dataset}/checkpoints/{args.repr}/{args.loss_type}/{args.resume:03d}.pth'
         print("Resuming from: ", sd_path)
         model.load_state_dict(torch.load(sd_path))
     return model

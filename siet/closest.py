@@ -25,18 +25,31 @@ def closest(test_matrices, train_matrices, path_output):
     return all_angles
 
 
-# 6.6 one color
-# 6.638658484728638 colorful
- 
-dataset = 'cube_colorful'
-path_test = f'{dataset}/test/matice.csv'
-path_train = f'{dataset}/train/matice.csv'
-table_test = np.loadtxt(path_test, delimiter=',')
-test_matrices = np.apply_along_axis(help2matrix, 1, table_test)
-table_train = np.loadtxt(path_train, delimiter=',')
-train_matrices = np.apply_along_axis(help2matrix, 1, table_train)
+datasets = ['cube_cool', 'cube_big_hole', 'cube_dotted', 'cube_colorful', 'cube_one_color']
+for dataset in datasets:    
+    path_test = f'datasets/{dataset}/test/matice.csv'
+    path_train = f'datasets/{dataset}/train/matice.csv'
+    table_test = np.loadtxt(path_test, delimiter=',')
+    test_matrices = np.apply_along_axis(help2matrix, 1, table_test)
+    table_train = np.loadtxt(path_train, delimiter=',')
+    train_matrices = np.apply_along_axis(help2matrix, 1, table_train)
 
-path_output = f'{dataset}/closest.csv'
-all_angles = closest(test_matrices, train_matrices, path_output)
-print(all_angles)
-print(np.mean(all_angles))
+    path_output = f'datasets/{dataset}/closest.csv'
+    all_angles = closest(test_matrices, train_matrices, path_output)
+    # print(all_angles)
+    print(dataset, 'mean: ', np.mean(all_angles))
+    print(dataset, 'meadian: ', np.median(all_angles))
+
+'''
+cube_cool mean:  6.439367412262159
+cube_cool meadian:  6.301196977254207
+cube_big_hole mean:  18.980081086698906
+cube_big_hole meadian:  17.50317113542893
+cube_dotted mean:  9.878890932659946
+cube_dotted meadian:  9.850634916720388
+cube_colorful mean:  6.439367412262159
+cube_colorful meadian:  6.301196977254207
+cube_one_color mean:  6.439367412262159
+cube_one_color meadian:  6.301196977254207
+'''
+

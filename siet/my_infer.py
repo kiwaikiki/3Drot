@@ -25,6 +25,24 @@ def GS_transform(preds):
     transform[:, 2] = z
     return transform
 
+def angle_bins2rotation_Matrix(angles):
+    # print(angles)
+    # print(angles[0])
+    x, y, z = torch.argmax(angles[0], axis=0), torch.argmax(angles[1], axis=0), torch.argmax(angles[2],axis=0)
+    # print(x, y, z)
+    x_angle = torch.deg2rad(x)
+    y_angle = torch.deg2rad(y)
+    z_angle = torch.deg2rad(z)
+    # print(x_angle)
+    q = kornia.geometry.conversions.quaternion_from_euler(x_angle, y_angle, z_angle)
+    # print(q)
+    return kornia.geometry.conversions.quaternion_to_rotation_matrix(torch.tensor(q))
+
+def angles2Rotation_Matrix(angles):
+    x_angle, y_angle, z_angle = angles
+    q = kornia.geometry.conversions.quaternion_from_euler(x_angle, y_angle, z_angle)
+    return kornia.geometry.conversions.quaternion_to_rotation_matrix(torch.tensor(q))
+
 def infer(args):
     model = load_model(args)
     model.load_state_dict(torch.load(args.path_checkpoint, map_location='cuda:0'))
@@ -50,7 +68,7 @@ def infer(args):
                     gt_transform = gt_transforms[i].cpu().numpy()
                     print("Det: ", np.linalg.det(gt_transform))
                     print(gt_transform)
-                    
+
                     if args.repr == 'GS':
                         transform = args.repr_f((preds[0][i],preds[1][i])).cpu().numpy()
                     else:
@@ -81,18 +99,46 @@ if __name__ == '__main__':
         'Euler_binned' : angle_bins2rotation_Matrix
     }
 
-    args.path_pics = 'cube_big_hole'
-    args.repr = 'GS'
-    args.loss_type = 'elements'
-    args.path = os.path.join(args.repr, args.loss_type)
-    args.repr_f = repr_func[args.repr]
-    for i in range(0, 101, 10):
-        args.path_checkpoint = f'siet/training_data/{args.path_pics}/checkpoints/{args.path}/{i:03d}.pth'
-        args.path_infer = f'siet/training_data/{args.path_pics}/inferences/{args.path}/infer_results{i:03d}.csv'
-        print(args.path_checkpoint)
-        if not os.path.exists(args.path_checkpoint):
-            print(f'Path {args.path_checkpoint} does not exist')
-            break
+    reprs = [
+        'GS',
+        'Euler',
+        'Euler_binned',
+        'Quaternion',
+        # 'Axis_Angle',
+        # 'Axis_Angle_binned',
+        # 'Stereographic',
+        # 'Matrix'
+    ]
+    losses = [
+            'angle', 
+            'elements'
+              ]
 
-        infer(args)
-        print(f'Inference {i} done {args.path_checkpoint} {args.path_infer}')
+    datasets = [
+            'cube_cool', 
+            'cube_big_hole', 
+            'cube_dotted', 
+            'cube_colorful', 
+            'cube_one_color'
+            ]
+
+    for dset in datasets:
+        for repre in reprs:
+            for loss_type in losses:
+                args.dataset = dset
+                args.path_pics = f'datasets/{args.dataset}'
+
+                args.repr = repre
+                args.loss_type = loss_type
+                args.path = os.path.join(args.repr, args.loss_type)
+                args.repr_f = repr_func[args.repr]
+
+                for i in range(0, 101, 10):
+                    args.path_checkpoint = f'siet/training_data/{args.dataset}/checkpoints/{args.path}/{i:03d}.pth'
+                    args.path_infer = f'siet/training_data/{args.dataset}/inferences/{args.path}/infer_results{i:03d}.csv'
+                    if not os.path.exists(args.path_checkpoint):
+                        print(f'Path {args.path_checkpoint} does not exist')
+                        break
+
+                    infer(args)
+                    print(f'Inference {i} done {args.path_checkpoint} {args.path_infer}')

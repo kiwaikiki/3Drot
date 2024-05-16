@@ -48,32 +48,32 @@ def evaluate(truth, pred):
 
     # print(eRE_list)
     # print(len(eRE_list))
-    print(f'better: {counter_better}')
-    print(f'worse: {counter_worse}')
-    print(f'Mean eRE: {np.mean(eRE_list)}')
-    print(f'Median eRE: {np.median(eRE_list)}')
-    print(f'Max eRE: {np.max(eRE_list)}')
-    print(f'Min eRE: {np.min(eRE_list)}')
-    print(f'Std eRE: {np.std(eRE_list)}')
-    print(f'90th percentile eRE: {np.percentile(eRE_list, 90)}')
+    # print(f'better: {counter_better}')
+    # print(f'worse: {counter_worse}')
+    # print(f'Mean eRE: {np.mean(eRE_list)}')
+    # print(f'Median eRE: {np.median(eRE_list)}')
+    # print(f'Max eRE: {np.max(eRE_list)}')
+    # print(f'Min eRE: {np.min(eRE_list)}')
+    # print(f'Std eRE: {np.std(eRE_list)}')
+    # print(f'90th percentile eRE: {np.percentile(eRE_list, 90)}')
 
     return eRE_list
 
-def save_results(results, repre, loss_f):
-    tab = PrettyTable(['metric', 'represetnation', 'loss_function', 'epoch', 'median', 'mean', '5', '10', 'all'])
+def save_results(results, repre, loss_f, dataset):
+    tab = PrettyTable(['metric', 'dataset', 'represetnation', 'loss_function', 'epoch', 'median', 'mean', '5', '10', 'all'])
     tab.align["metric"] = "l"
     tab.float_format = '0.2'
     for res in results:
         errs = np.array(res['eRE'])
         errs[np.isnan(errs)] = 180
         result = np.array([np.sum(errs < t) / len(errs) for t in range(1, 21)])
-        tab.add_row(['eRE', repre, loss_f, res['epoch'], np.median(errs), np.mean(errs), np.mean(result[:5]), np.mean(result[:10]), np.mean(result)])
+        tab.add_row(['eRE', dataset, repre, loss_f, res['epoch'], np.median(errs), np.mean(errs), np.mean(result[:5]), np.mean(result[:10]), np.mean(result)])
 
     print(tab)
 
-    with open(f'siet/training_data/{path_pics}/results/{repre}/{loss_f}/prettytab_results.csv', 'w') as f:
+    with open(f'siet/training_data/{dataset}/results/{repre}/{loss_f}/prettytab_results.csv', 'w') as f:
         f.write(tab.get_string())
-    with open(f'siet/training_data/{path_pics}/results/{repre}/{loss_f}/csv_results.csv', 'w') as f:
+    with open(f'siet/training_data/{dataset}/results/{repre}/{loss_f}/csv_results.csv', 'w') as f:
         f.write(tab.get_csv_string())
 
 
@@ -81,25 +81,52 @@ if __name__ == '__main__':
     """
     Example usage: python evaluate.py path/to/dataset_with_predictions
     """
-    path_pics = 'cube_big_hole'
-    truth = f'{path_pics}/test/matice.csv'
-    repre = 'GS'
-    loss_used = 'elements'
-    path = f'{repre}/{loss_used}/'
-    if os.path.exists(f'siet/training_data/{path_pics}/results/{path}test_err_by_epochs.csv'):
-        os.remove(f'siet/training_data/{path_pics}/results/{path}test_err_by_epochs.csv')
-    results = []
-    for i in range(0, 101, 10):
-        pred = f'siet/training_data/{path_pics}/inferences/{path}infer_results{i:03d}.csv'
-        if not os.path.exists(pred):
-            print(f'Path {pred} does not exist')
-            break
-        eRE_list = evaluate(truth, pred)
-        dic = {'eRE': eRE_list,
-               'epoch': i  }
-        results.append(dic)
+    reprs = [
+        'GS',
+        'Euler',
+        'Euler_binned',
+        'Quaternion',
+        # 'Axis_Angle',
+        # 'Axis_Angle_binned',
+        # 'Stereographic',
+        # 'Matrix'
+    ]
+    losses = [
+            'angle', 
+            'elements'
+              ]
 
-        with open(f'siet/training_data/{path_pics}/results/{path}test_err_by_epochs.csv', 'a') as f:
-            print(f'{i},{np.mean(eRE_list)},{np.median(eRE_list)},{np.max(eRE_list)},{np.min(eRE_list)},{np.std(eRE_list)},{np.percentile(eRE_list, 90)}', file=f)
-    
-    save_results(results, repre, loss_used) 
+    datasets = [
+            'cube_cool', 
+            'cube_big_hole', 
+            'cube_dotted', 
+            'cube_colorful', 
+            'cube_one_color'
+            ]
+
+    for dset in datasets:
+        for repre in reprs:
+            for loss_type in losses:
+                path_pics = f'datasets/{dset}'
+
+                truth = f'{path_pics}/test/matice.csv'
+               
+                path = f'{repre}/{loss_type}/'
+                if os.path.exists(f'siet/training_data/{dset}/results/{path}test_err_by_epochs.csv'):
+                    os.remove(f'siet/training_data/{dset}/results/{path}test_err_by_epochs.csv')
+                results = []
+
+                for i in range(0, 101, 10):
+                    pred = f'siet/training_data/{dset}/inferences/{path}infer_results{i:03d}.csv'
+                    if not os.path.exists(pred):
+                        print(f'Path {pred} does not exist')
+                        break
+                    eRE_list = evaluate(truth, pred)
+                    dic = {'eRE': eRE_list,
+                        'epoch': i  }
+                    results.append(dic)
+
+                    with open(f'siet/training_data/{dset}/results/{path}test_err_by_epochs.csv', 'a') as f:
+                        print(f'{i},{np.mean(eRE_list)},{np.median(eRE_list)},{np.max(eRE_list)},{np.min(eRE_list)},{np.std(eRE_list)},{np.percentile(eRE_list, 90)}', file=f)
+                
+                save_results(results, repre, loss_type, dset) 
