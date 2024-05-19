@@ -1,15 +1,20 @@
 import os
 reprs = [
-        'GS',
-        'Euler',
-        'Euler_binned',
-        'Quaternion',
-        'Axis_Angle',
+        # 'GS',
+        # 'Euler',
+        # 'Euler_binned',
+        # 'Quaternion',
+        'Axis_Angle_3D',
+        'Axis_Angle_4D',
         'Axis_Angle_binned',
-        'Stereographic',
-        'Matrix'
+        # 'Stereographic',
+        # 'Matrix'
     ]
-losses = ['angle', 'elements']
+losses = [
+            'angle_rotmat',
+            'elements',
+            'angle_vectors'
+              ]
 
 datasets = ['cube_cool', 
             'cube_big_hole', 

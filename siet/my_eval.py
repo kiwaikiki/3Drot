@@ -84,28 +84,28 @@ if __name__ == '__main__':
     Example usage: python evaluate.py path/to/dataset_with_predictions
     """
     reprs = [
-        # 'GS',
-        # 'Euler',
+        'GS',
+        'Euler',
         'Euler_binned',
-        # 'Quaternion',
-        # 'Axis_Angle_3D',
-        # 'Axis_Angle_4D',
-        # 'Axis_Angle_binned',
+        'Quaternion',
+        'Axis_Angle_3D',
+        'Axis_Angle_4D',
+        'Axis_Angle_binned',
         # 'Stereographic',
         # 'Matrix'
     ]
     losses = [
             'angle_rotmat',
-            # 'elements',
-            # 'angle_vectors'
+            'elements',
+            'angle_vectors'
               ]
 
     datasets = [
             'cube_cool', 
-            # 'cube_big_hole', 
-            # 'cube_dotted', 
-            # 'cube_colorful', 
-            # 'cube_one_color'
+            'cube_big_hole', 
+            'cube_dotted', 
+            'cube_colorful', 
+            'cube_one_color'
             ]
 
     for dset in datasets:
