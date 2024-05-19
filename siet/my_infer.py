@@ -43,6 +43,24 @@ def angles2Rotation_Matrix(angles):
     q = kornia.geometry.conversions.quaternion_from_euler(x_angle, y_angle, z_angle)
     return kornia.geometry.conversions.quaternion_to_rotation_matrix(torch.tensor(q))
 
+def axis_angle3D2rotation_Matrix(axis):
+    return kornia.geometry.conversions.axis_angle_to_rotation_matrix(torch.stack([axis]))[0]
+
+def axis_angle4D2rotation_Matrix(pred):
+    axis, angle = pred
+    axis = axis / torch.linalg.norm(axis)
+    return kornia.geometry.conversions.axis_angle_to_rotation_matrix(torch.stack([axis*angle]))[0]
+
+def axis_angle_bins2rotation_Matrix(preds):
+    axis, angle_bins = preds
+    axis = axis / torch.linalg.norm(axis)
+    angle = torch.deg2rad(torch.argmax(angle_bins))
+    pred_R = kornia.geometry.conversions.axis_angle_to_rotation_matrix(torch.stack([axis*angle]))[0]
+    return pred_R
+
+
+
+
 def infer(args):
     model = load_model(args)
     model.load_state_dict(torch.load(args.path_checkpoint, map_location='cuda:0'))
@@ -69,7 +87,7 @@ def infer(args):
                     print("Det: ", np.linalg.det(gt_transform))
                     print(gt_transform)
 
-                    if args.repr == 'GS':
+                    if args.repr in ['GS', 'Axis_Angle_4D', 'Axis_Angle_binned']:
                         transform = args.repr_f((preds[0][i],preds[1][i])).cpu().numpy()
                     else:
                         transform = args.repr_f(preds[i]).cpu().numpy()
@@ -96,30 +114,36 @@ if __name__ == '__main__':
         'GS' : GS_transform,
         'Euler' : angles2Rotation_Matrix,
         'Quaternion' : quaternion2Rotation_Matrix,
-        'Euler_binned' : angle_bins2rotation_Matrix
+        'Euler_binned' : angle_bins2rotation_Matrix,
+        'Axis_Angle_3D' : axis_angle3D2rotation_Matrix,
+        'Axis_Angle_4D' : axis_angle4D2rotation_Matrix,
+        'Axis_Angle_binned' : axis_angle_bins2rotation_Matrix
     }
 
     reprs = [
-        'GS',
-        'Euler',
+        # 'GS',
+        # 'Euler',
         'Euler_binned',
-        'Quaternion',
-        # 'Axis_Angle',
+        # 'Quaternion',
+        # 'Axis_Angle_3D',
+        # 'Axis_Angle_4D',
         # 'Axis_Angle_binned',
         # 'Stereographic',
         # 'Matrix'
     ]
+
     losses = [
-            'angle', 
-            'elements'
+            'angle_rotmat',
+            # 'elements',
+            # 'angle_vectors'
               ]
 
     datasets = [
             'cube_cool', 
-            'cube_big_hole', 
-            'cube_dotted', 
-            'cube_colorful', 
-            'cube_one_color'
+            # 'cube_big_hole', 
+            # 'cube_dotted', 
+            # 'cube_colorful', 
+            # 'cube_one_color'
             ]
 
     for dset in datasets:
@@ -133,7 +157,7 @@ if __name__ == '__main__':
                 args.path = os.path.join(args.repr, args.loss_type)
                 args.repr_f = repr_func[args.repr]
 
-                for i in range(0, 101, 10):
+                for i in range(0, 91, 10):
                     args.path_checkpoint = f'siet/training_data/{args.dataset}/checkpoints/{args.path}/{i:03d}.pth'
                     args.path_infer = f'siet/training_data/{args.dataset}/inferences/{args.path}/infer_results{i:03d}.csv'
                     if not os.path.exists(args.path_checkpoint):

@@ -2,7 +2,8 @@ from matplotlib import pyplot as plt
 import numpy as np
 import os
 
-def plot_losses(path, train, val, test, title):
+
+def plot_losses(path, train, val, title):
     with open(f'{path}/{train}', 'r') as f:
         train_lines = f.readlines()
         train_lines = [float(line.strip()) for line in train_lines]
@@ -12,20 +13,60 @@ def plot_losses(path, train, val, test, title):
         val_lines = [float(line.strip()) for line in val_lines]
         plt.plot(train_lines, label='train')
         plt.plot(val_lines, label='val')
-        
-    with open(f'{path}/{test}', 'r') as f:
-        test_lines = np.loadtxt(f, delimiter=',')
-        plt.plot(test_lines.T[0], test_lines.T[1], label='test')
-    
+
     plt.title(title)
     plt.legend()
-    plt.savefig(f'{path}/{title}.png')
+    plt.savefig(f'Losses_{title}.png')
     plt.show()
 
+def roc_curve(paths, dataset):
+    plt.clf()
+    for path in paths:
+        try:
+            pth = os.path.join('siet', 'training_data', dataset, 'results',path)
+            errs = np.loadtxt(f'{pth}/err_by_index.csv', delimiter=',')[:, 1]
+            curve = np.array([np.sum(errs < t) / len(errs) for t in range(1, 181)])
+            plt.plot(curve, label=path)
+        except:
+            print(f'Error in {path}')
+            continue
+    plt.title(dataset)
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')  
+    plt.savefig(f'ROC_{dataset}.png', bbox_inches='tight')
+    plt.show()
+    
+
+def closest_vs_errors(path, title):
+    pass
     
 if __name__ == "__main__":
-    dataset = 'cool_cube'
-    repre = 'Euler'
-    lossf = 'angle'
-    path = os.path.join('siet', 'training_data', dataset, 'results', repre, lossf)
-    plot_losses(path, 'train_err.out', 'val_err.out', 'test_err_by_epochs.csv', f'{repre} {lossf}')
+
+    reprs = [
+        'GS',
+        'Euler',
+        'Euler_binned',
+        'Quaternion',
+        'Axis_Angle_3D',
+        'Axis_Angle_4D',
+        'Axis_Angle_binned',
+        # 'Stereographic',
+        # 'Matrix'
+    ]
+    losses = [
+            'angle_rotmat',
+            'elements',
+            'angle_vectors'
+              ]
+
+    datasets = [
+            'cube_cool', 
+            'cube_big_hole', 
+            'cube_dotted', 
+            'cube_colorful', 
+            'cube_one_color'
+            ]
+    # path = os.path.join('siet', 'training_data', dataset, 'results', repre, lossf)
+    # plot_losses(path, 'train_err.out', 'val_err.out',  f'{repre} {lossf}')
+    paths = [ f'{repre}/{lossf}'  for repre in reprs for lossf in losses]
+    for dataset in datasets:
+        roc_curve(paths, dataset)

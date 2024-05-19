@@ -271,10 +271,10 @@ class Network_Axis_Angle_Binned(torch.nn.Module):
 
         self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
 
-        self.n_bins = 360/5
+        self.n_bins = 180
 
         self.axis = torch.nn.Linear(last_feat, 3) #staci iba toto mozno
-        self.angle = torch.nn.Linear(last_feat, 1*self.n_bins)
+        self.angle = torch.nn.Linear(last_feat, self.n_bins)
 
         # self.axis = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
         #                                 torch.nn.LeakyReLU(),
@@ -303,7 +303,7 @@ class Network_Axis_Angle_Binned(torch.nn.Module):
 
         axis = self.axis(x)
         
-        angle = self.angle(x).view(-1, 1, self.n_bins)
+        angle = self.angle(x)
 
         return axis, angle
     
@@ -414,7 +414,8 @@ def load_model(args):
         'Euler': Network_Euler,
         'Euler_binned': Network_Euler_Binned,
         'Quaternion': Network_Quaternion,
-        'Axis_Angle': Network_Axis_Angle_3D,
+        'Axis_Angle_3D': Network_Axis_Angle_3D,
+        'Axis_Angle_4D': Network_Axis_Angle_4D,
         'Axis_Angle_binned': Network_Axis_Angle_Binned,
         'Stereographic': Network_Stereographic,
         'Matrix': Network_Matrix
