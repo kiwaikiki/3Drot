@@ -28,6 +28,7 @@ def table(cube, reprs, losses):
                 continue
             mean = table.loc[index, 'mean']
             median = table.loc[index, 'median']
+
             text += f' & {mean:.2f} & {median:.2f}'
         text += ' \\\\ \n'
     
@@ -39,14 +40,15 @@ def table(cube, reprs, losses):
     return text
 
 reprs = [
-    'GS',
     'Euler',
     'Euler_binned',
     'Quaternion',
     'Axis_Angle_3D',
     'Axis_Angle_4D',
     'Axis_Angle_binned',
-    # 'Stereographic',
+    'Stereographic',
+    'GS',
+
     # 'Matrix'
 ]
 

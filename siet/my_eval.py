@@ -91,7 +91,7 @@ if __name__ == '__main__':
         'Axis_Angle_3D',
         'Axis_Angle_4D',
         'Axis_Angle_binned',
-        # 'Stereographic',
+        'Stereographic',
         # 'Matrix'
     ]
     losses = [
@@ -124,7 +124,7 @@ if __name__ == '__main__':
                     break 
                 
                 results = []
-                for i in range(0, 101, 10):
+                for i in range(100, 101, 10):
                     pred = f'siet/training_data/{dset}/inferences/{repre}/{loss_type}/infer_results{i:03d}.csv'
                     if not os.path.exists(pred):
                         print(f'Path {pred} does not exist')

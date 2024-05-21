@@ -8,8 +8,8 @@ reprs = [
     'Quaternion',
     'Axis_Angle_3D',
     'Axis_Angle_4D',
-    # 'Axis_Angle_binned',
-    # 'Stereographic',
+    'Axis_Angle_binned',
+    'Stereographic',
     # 'Matrix'
 ]
 losses = [

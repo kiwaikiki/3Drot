@@ -58,7 +58,19 @@ def axis_angle_bins2rotation_Matrix(preds):
     pred_R = kornia.geometry.conversions.axis_angle_to_rotation_matrix(torch.stack([axis*angle]))[0]
     return pred_R
 
-
+def stereo2rotation_Matrix(preds):
+    first, last = preds[:2], preds[2:]
+    norm_last = torch.linalg.norm(last)
+    new_element = (norm_last**2 - 1) /2 
+    print(new_element)
+    new_last = torch.tensor([new_element, last[0], last[1], last[2]]).cuda()
+    new_last = new_last / norm_last
+    gs = torch.cat([first, new_last])
+    # print(gs)
+    # gs = gs.reshape(-1, 2, 3).transpose(1,0)
+    # # print(gs)
+    transform = GS_transform({gs[:3], gs[3:]})
+    return transform
 
 
 def infer(args):
@@ -117,7 +129,8 @@ if __name__ == '__main__':
         'Euler_binned' : angle_bins2rotation_Matrix,
         'Axis_Angle_3D' : axis_angle3D2rotation_Matrix,
         'Axis_Angle_4D' : axis_angle4D2rotation_Matrix,
-        'Axis_Angle_binned' : axis_angle_bins2rotation_Matrix
+        'Axis_Angle_binned' : axis_angle_bins2rotation_Matrix,
+        'Stereographic' : stereo2rotation_Matrix,
     }
 
     reprs = [
@@ -128,7 +141,7 @@ if __name__ == '__main__':
         'Axis_Angle_3D',
         'Axis_Angle_4D',
         'Axis_Angle_binned',
-        # 'Stereographic',
+        'Stereographic',
         # 'Matrix'
     ]
 
@@ -157,7 +170,7 @@ if __name__ == '__main__':
                 args.path = os.path.join(args.repr, args.loss_type)
                 args.repr_f = repr_func[args.repr]
 
-                for i in range(0, 91, 10):
+                for i in range(100, 101, 10):
                     args.path_checkpoint = f'siet/training_data/{args.dataset}/checkpoints/{args.path}/{i:03d}.pth'
                     args.path_infer = f'siet/training_data/{args.dataset}/inferences/{args.path}/infer_results{i:03d}.csv'
                     if not os.path.exists(args.path_checkpoint):
