@@ -9,12 +9,13 @@ import gc
 from my_network import normalized_l2_loss,  load_model, parse_command_line
 from my_dataset import Dataset
 from my_loss import (GS_Loss_Calculator, 
-                     Euler_Loss_Calculator, 
-                     Euler_binned_Loss_Calculator, 
-                     Quaternion_Loss_Calculator, 
-                     Axis_angle_3D_Loss_Calculator, 
-                     Axis_angle_4D_Loss_Calculator,
-                     Axis_angle_binned_Loss_Calculator
+                    Euler_Loss_Calculator,
+                    Euler_binned_Loss_Calculator,
+                    Quaternion_Loss_Calculator,
+                    Axis_angle_3D_Loss_Calculator,
+                    Axis_angle_4D_Loss_Calculator,
+                    Axis_angle_binned_Loss_Calculator,
+                    Stereographic_Loss_Calculator,
                      )
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
@@ -23,10 +24,10 @@ gc.enable()
 
 # select device
 # # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["NVIDIA_VISIBLE_DEVICES"] = "1"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# os.environ["NVIDIA_VISIBLE_DEVICES"] = "1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 soft, hard = resource.getrlimit(resource.RLIMIT_DATA)
 print('Soft limit starts as  :', soft)
@@ -118,7 +119,7 @@ if __name__ == '__main__':
     args.path_csv = 'matice.csv'
     args.input_width = 256
     args.input_height = 256
-    args.batch_size = 64
+    args.batch_size = 128
     args.workers = 8
     args.dump_every = 10
     args.epochs = 101
@@ -131,12 +132,13 @@ if __name__ == '__main__':
         'Axis_Angle_3D': Axis_angle_3D_Loss_Calculator,
         'Axis_Angle_4D': Axis_angle_4D_Loss_Calculator,
         'Axis_Angle_binned': Axis_angle_binned_Loss_Calculator,
+        'Stereographic': Stereographic_Loss_Calculator
     }
 
 
     # args.dataset = 'cube_cool'
     # args.path_pics = f'datasets/{args.dataset}'
-    # args.repr = 'Axis_Angle_binned'
+    # args.repr = 'GS'
     # args.loss_type = 'elements'
     # args.loss_calculator = loss_calcs[args.repr]
     # args.path_checkpoints = os.path.join('siet', 'training_data', args.dataset, 'checkpoints', args.repr, args.loss_type)
@@ -144,20 +146,21 @@ if __name__ == '__main__':
     # train(args)
 
     reprs = [
-        'GS',
-        'Euler',
-        'Euler_binned',
-        'Quaternion',
-        'Axis_Angle_3D',
-        'Axis_Angle_4D',
-        'Axis_Angle_binned',
-        # 'Stereographic',
+        # 'GS',
+        # 'Euler',
+        # 'Euler_binned',
+        # 'Quaternion',
+        # 'Axis_Angle_3D',
+        # 'Axis_Angle_4D',
+        # 'Axis_Angle_binned',
+        'Stereographic',
         # 'Matrix'
     ]
     losses = [
-            'angle_rotmat',
-            'elements',
-            'angle_vectors'
+            # 'angle_rotmat',
+            # 'elements',
+            # 'angle_vectors'
+            'elements2'
               ]
 
     datasets = [
@@ -167,10 +170,8 @@ if __name__ == '__main__':
             'cube_colorful', 
             'cube_one_color'
             ]
-    alldone = [
-        'cube_big'
 
-    ]
+
 
     for dset in datasets:
         for r in reprs:
@@ -183,7 +184,7 @@ if __name__ == '__main__':
                 args.path_pics = f'datasets/{dset}'
                 args.dataset = dset
                 args.repr = r
-                # args.resume = 70
+                # args.resume = 50
                 args.loss_type = l
                 args.loss_calculator = loss_calcs[args.repr] 
                 try:

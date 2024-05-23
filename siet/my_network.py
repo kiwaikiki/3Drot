@@ -34,6 +34,7 @@ class Network_GS(torch.nn.Module):
         self.fc_z = torch.nn.Linear(last_feat, 3) #staci iba toto mozno
         self.fc_y = torch.nn.Linear(last_feat, 3) #staci iba toto mozno
 
+        # self.fc_t = torch.nn.Linear(last_feat, 3) #staci iba toto mozno
         
         # self.fc_z = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
         #                                 torch.nn.LeakyReLU(),
@@ -67,6 +68,7 @@ class Network_GS(torch.nn.Module):
 
         z = self.fc_z(x)
         y = self.fc_y(x)
+        # t = self.fc_t(x)
 
         return z, y
 

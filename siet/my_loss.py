@@ -211,24 +211,27 @@ class GS_Loss_Calculator(Loss_Calculator):
         self.function_dict = {'angle_rotmat': (self.calculate_angle_rotmat_loss, 
                                     self.calculate_val_angle_rotmat_loss),
                         'angle_vectors': (self.calculate_angle_vectors_train_loss,
-                                    self.calculate_angle_vectors_val_loss)
+                                    self.calculate_angle_vectors_val_loss),
+                        'elements': (self.calculate_elements_loss,
+                                    self.calculate_val_elements_loss)
         }
         self.folder = f'siet/training_data/{args.dataset}/results/GS/{args.loss_type}/'
         self.train_file = self.folder + 'train_err'
         self.val_file = self.folder + 'val_err'
       
-
-    def calculate_L2_loss(self, preds, true_transform):
-        transform = GS_transform(preds)
-        loss = self.l2loss_f(transform, true_transform)
+    def calculate_elements_loss(self, preds, true_transform):
+        pred_z, pred_y = preds
+        loss_z = self.l2loss_f(pred_z, true_transform[:, :3, 2].float().cuda())
+        loss_y = self.l2loss_f(pred_y, true_transform[:, :3, 1].float().cuda())
+        loss = loss_z + loss_y
 
         self.loss_running = 0.9 * self.loss_running + 0.1 * loss
 
         print(f'Running Loss: {self.loss_running.item()}')
         return loss
-    
-    def calculate_val_L2_loss(self, preds, true_transform):
-        self.val_losses.append(self.calculate_L2_loss(preds, true_transform).detach().item())
+
+    def calculate_val_elements_loss(self, preds, true_transform):
+        self.val_losses.append(self.calculate_elements_loss(preds, true_transform).detach().item())
 
     def calculate_angle_rotmat_loss(self, preds, true_transform):
         true_transfrm = true_transform.float()
@@ -254,7 +257,6 @@ class GS_Loss_Calculator(Loss_Calculator):
         loss_y = torch.mean(get_angles(pred_y, transform[:, :3, 1].cuda()))
         loss = loss_z + loss_y  
 
-        # Note running loss calc makes loss increase in the beginning of training!
         self.loss_z_running = 0.9 * self.loss_z_running + 0.1 * loss_z
         self.loss_y_running = 0.9 * self.loss_y_running + 0.1 * loss_y
         self.loss_running = 0.9 * self.loss_running + 0.1 * loss
@@ -671,23 +673,103 @@ class Stereographic_Loss_Calculator(Loss_Calculator):
 
         self.function_dict = {'angle_rotmat': (self.calculate_angle_rotmat_loss, 
                                     self.calculate_val_angle_rotmat_loss),
+                        'angle_vectors': (self.calculate_angle_vectors_loss,
+                                    self.calculate_val_angle_vectors_loss),
                         'elements': (self.calculate_elements_loss,
-                                    self.calculate_val_elements_loss)}
+                                    self.calculate_val_elements_loss),
+                        'elements2': (self.calaculate_elements2_loss,
+                                    self.calculate_val_elements2_loss)
+                        
+        }
 
         self.folder = f'siet/training_data/{args.dataset}/results/Stereographic/{args.loss_type}/'
         self.train_file = self.folder + 'train_err'
         self.val_file = self.folder + 'val_err'
 
+    def get_5D2gs(self, pred):
+        first, last = pred[:,:2], pred[:,2:]
+        norm_last = torch.linalg.norm(last, axis=1)
+        # print(norm_last)
+        new_element = (norm_last**2 - 1) /2 
+        # print(new_element)
+        new_last = torch.stack([new_element/norm_last, last[:, 0]/norm_last, last[:, 1]/norm_last, last[:, 2]/norm_last], dim=1)
+        gs = torch.cat([first, new_last], dim=1)
+        # print(gs)
+        gs = gs.reshape(-1, 2, 3).transpose(1,0)
+        # print(gs)
+        return gs
+    
+    def get_gs25D(self, gs):
+        gs_vec = gs.reshape(-1, 6)
+        same, u = gs_vec[:,:2], gs_vec[:,2:]
+        v = u / torch.linalg.norm(u, axis=1).unsqueeze(1)
+        v1, v2, v3, v4 = v[:,0], v[:,1], v[:,2], v[:,3]
+        new = torch.stack([v2/(1-v1), v3/(1-v1), v4/(1-v1)], dim=1)
+        return torch.cat([same, new], dim=1)
+        
+
     def calculate_angle_rotmat_loss(self, pred, gt):
-        pass
+        transform = self.get_5D2gs(pred)
+        transform = GS_transform(transform)
+
+        true_transfrm = gt.float()
+        loss = calculate_eRE(true_transfrm, transform.cuda()).cuda()
+
+        self.loss_running = 0.9 * self.loss_running + 0.1 * loss
+
+        print(f'Running Loss: {self.loss_running.item()}')
+        return loss
+    
 
     def calculate_val_angle_rotmat_loss(self, pred, gt):
-        pass
+        self.val_losses.append(self.calculate_angle_rotmat_loss(pred, gt).detach().item())
 
+    def calculate_angle_vectors_loss(self, pred, gt):
+        transform = self.get_5D2gs(pred)
+        pred_z, pred_y = transform[0], transform[1]
+        gt = gt.float()
+
+        loss_z = torch.mean(get_angles(pred_z,  gt[:, :3, 2].cuda()))
+        loss_y = torch.mean(get_angles(pred_y,  gt[:, :3, 1].cuda()))
+        loss = loss_z + loss_y
+
+        self.loss_running = 0.9 * self.loss_running + 0.1 * loss
+
+        print(f'Running Loss: {self.loss_running.item()}')
+        return loss
+
+    def calculate_val_angle_vectors_loss(self, pred, gt):
+        self.val_losses.append(self.calculate_angle_vectors_loss(pred, gt).detach().item())
+        
     def calculate_elements_loss(self, pred, gt):
-        pass
+        transform = self.get_5D2gs(pred)
+        pred_z, pred_y = transform[0], transform[1]
+        gt = gt.float()
+        
+        loss_z = self.l2loss_f(pred_z, gt[:, :3, 2].float().cuda())
+        loss_y = self.l2loss_f(pred_y, gt[:, :3, 1].float().cuda())
+        loss = loss_z + loss_y
 
-    def calculate_val_elements_loss(self, pred, gt):
-        pass
+        self.loss_running = 0.9 * self.loss_running + 0.1 * loss
 
+        print(f'Running Loss: {self.loss_running.item()}')
+        return loss
     
+    def calculate_val_elements_loss(self, pred, gt):
+        loss = self.calculate_elements_loss(pred, gt)
+        self.val_losses.append(loss.detach().item())
+    
+    def calaculate_elements2_loss(self, pred, gt):
+        gs = gt.float()[:, :3, :2]
+        gs_5D = self.get_gs25D(gs)
+
+        loss = self.l2loss_f(pred, gs_5D.float().cuda())
+        self.loss_running = 0.9 * self.loss_running + 0.1 * loss
+
+        print(f'Running Loss: {self.loss_running.item()}')
+        return loss
+
+    def calculate_val_elements2_loss(self, pred, gt):
+        loss = self.calaculate_elements2_loss(pred, gt)
+        self.val_losses.append(loss.detach().item())
+        
