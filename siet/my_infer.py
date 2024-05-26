@@ -134,28 +134,29 @@ if __name__ == '__main__':
     }
 
     reprs = [
-        'GS',
-        'Euler',
-        'Euler_binned',
-        'Quaternion',
-        'Axis_Angle_3D',
-        'Axis_Angle_4D',
-        'Axis_Angle_binned',
+        # 'GS',
+        # 'Euler',
+        # 'Euler_binned',
+        # 'Quaternion',
+        # 'Axis_Angle_3D',
+        # 'Axis_Angle_4D',
+        # 'Axis_Angle_binned',
         'Stereographic',
         # 'Matrix'
     ]
 
     losses = [
-            'angle_rotmat',
+            # 'angle_rotmat',
+            # 'elements2',
             'elements',
-            'angle_vectors'
+            # 'angle_vectors'
               ]
 
     datasets = [
-            'cube_cool', 
-            'cube_big_hole', 
-            'cube_dotted', 
-            'cube_colorful', 
+            # 'cube_cool', 
+            # 'cube_big_hole', 
+            # 'cube_dotted', 
+            # 'cube_colorful', 
             'cube_one_color'
             ]
 
@@ -170,7 +171,7 @@ if __name__ == '__main__':
                 args.path = os.path.join(args.repr, args.loss_type)
                 args.repr_f = repr_func[args.repr]
 
-                for i in range(100, 101, 10):
+                for i in range(0, 101, 10):
                     args.path_checkpoint = f'siet/training_data/{args.dataset}/checkpoints/{args.path}/{i:03d}.pth'
                     args.path_infer = f'siet/training_data/{args.dataset}/inferences/{args.path}/infer_results{i:03d}.csv'
                     if not os.path.exists(args.path_checkpoint):

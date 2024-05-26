@@ -14,6 +14,7 @@ reprs = [
 ]
 losses = [
     'angle_rotmat',
+    'elements2',
     'elements',
     'angle_vectors'
     ]

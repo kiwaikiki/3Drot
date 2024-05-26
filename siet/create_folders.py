@@ -5,22 +5,24 @@ reprs = [
         # 'Euler_binned',
         # 'Quaternion',
         # 'Axis_Angle_3D',
-        # 'Axis_Angle_4D',
+        'Axis_Angle_4D',
         # 'Axis_Angle_binned',
-        'Stereographic',
+        # 'Stereographic',
         # 'Matrix'
     ]
 losses = [
-            'angle_rotmat',
-            # 'elements',
-            # 'angle_vectors'
+            # 'angle_rotmat',
+            'elements',
+            # 'angle_vectors',
+            # 'elements2',
+
               ]
 
-# datasets = ['cube_cool', 
-#             'cube_big_hole', 
-#             'cube_dotted', 
-#             'cube_colorful', 
-#             'cube_one_color']
+datasets = ['cube_cool', 
+            'cube_big_hole', 
+            'cube_dotted', 
+            'cube_colorful', 
+            'cube_one_color']
 
 directory = 'training_data'
 if not os.path.exists(directory):

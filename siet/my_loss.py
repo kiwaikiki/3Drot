@@ -701,8 +701,12 @@ class Stereographic_Loss_Calculator(Loss_Calculator):
     
     def get_gs25D(self, gs):
         gs_vec = gs.reshape(-1, 6)
+        print(gs_vec)
         same, u = gs_vec[:,:2], gs_vec[:,2:]
+        print(same, u)
         v = u / torch.linalg.norm(u, axis=1).unsqueeze(1)
+        print(v)
+        
         v1, v2, v3, v4 = v[:,0], v[:,1], v[:,2], v[:,3]
         new = torch.stack([v2/(1-v1), v3/(1-v1), v4/(1-v1)], dim=1)
         return torch.cat([same, new], dim=1)
@@ -760,7 +764,7 @@ class Stereographic_Loss_Calculator(Loss_Calculator):
         self.val_losses.append(loss.detach().item())
     
     def calaculate_elements2_loss(self, pred, gt):
-        gs = gt.float()[:, :3, :2]
+        gs = gt.float()[:, :3, 1:]
         gs_5D = self.get_gs25D(gs)
 
         loss = self.l2loss_f(pred, gs_5D.float().cuda())
