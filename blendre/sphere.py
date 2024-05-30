@@ -218,7 +218,7 @@ def solid_sphere_w_matrices(matrices, angle):
 def is_in_blob_matrix(matrix, matrices, angle):
     for mat in matrices:
         rot_ang = rotation_angle(mat.T @ matrix)
-        # print(rot_ang)
+        # print("rotangle", rot_ang, "angle", angle)
         if rot_ang < angle:
             vec1 = np.array([1, 0, 0])
             vec2 = np.array([1, 0, 0])
@@ -334,12 +334,12 @@ def check_matrices(matrices):
     plt.show()
 
 if __name__ == '__main__':
-    path = 'cube_quad'
+    path = 'datasets/cube_dotted'
     sphere_by_set(path)
     # matrices = evenly_spaced_rotation_matrices(20)
     # save_matrices(matrices, 'matrices.csv')
-    matrices = [rotation_matrix_from_vectors(np.array([1, 0, 0]), np.array([0, -1, 0]))]
-    # matrices = load_matrices('matrices.csv')
+    # matrices = [rotation_matrix_from_vectors(np.array([1, 0, 0]), np.array([0, -1, 0]))]
+    matrices = load_matrices('matrices.csv')
     # check_matrices(matrices)
     # blobs = load_blobs('blobs.csv')
     # blobs = [(np.array([1, 0, 0]), 1)]
@@ -348,7 +348,7 @@ if __name__ == '__main__':
     # scatter_sphere_w_blobs(blobs)
     # solid_sphere_w_blobs(blo////bs)
     # scatter_sphere_w_matrices(path, matrices)
-    solid_sphere_w_matrices(matrices,50)
+    solid_sphere_w_matrices(matrices,15)
 
 
     # roatate around x axis 90

@@ -11,6 +11,7 @@ from sphere import geodesic_distance, load_blobs, is_in_blob, is_in_blob_matrix,
 PROJECT_DIR = '/home/viki/FMFI/bc/blendre/'
 os.chdir(PROJECT_DIR)
 
+np.random.seed(34)
 class PictureGenerator:
     def __init__(self, obj_file : str,  render_x_y : tuple, texture_file : str = None) -> None:
         self.cleanup_scene()
@@ -49,12 +50,11 @@ class PictureGenerator:
                 self.obj.rotation_mode  = previous_mode
                 bpy.context.scene.render.filepath = os.path.join(output_dir, f"{id:04d}.png")
                 bpy.ops.render.render(write_still=True)
-                if matrix_file.endswith('.csv'):
-                    matrix = matrix2csv(self.obj.matrix_world)
-                    print(f'{id-1},{matrix}', file = f)
-                else:  
-                    matrix = matrix2string(self.obj.matrix_world) 
-                    print(f'{id-1}\n{matrix}', file = f)
+
+                matrix = np.array(self.obj.matrix_world)[:3,:3]
+                matrix_csv = matrix2csv(matrix)
+                print(f'{id},{matrix_csv}', file = f)
+                
                
 
         return (f'Elapsed time: {time.time() - start_time}')
@@ -87,7 +87,7 @@ class PictureGenerator:
 
             print(f'Elapsed time: {time.time() - start_time}')
 
-    def render_blobs_matrix(self, train_dir, val_dir, test_dir, matrix_file, blobs, number_train, number_val, number_test):
+    def render_blobs_matrix(self, train_dir, val_dir, test_dir, matrix_file, blobs, number_train, number_val, number_test, angle_dif):
         with open(f'{test_dir}/{matrix_file}', 'w') as f:
             pass
         with open(f'{train_dir}/{matrix_file}', 'w') as f:
@@ -116,7 +116,7 @@ class PictureGenerator:
             matrix_csv = matrix2csv(matrix)
             # matrix = matrix2csv(self.obj.matrix_world)
             
-            if is_in_blob_matrix(matrix, blobs, 50):
+            if is_in_blob_matrix(matrix, blobs, angle_dif):
                 if generated_test < number_test:   
                     with open(f'{test_dir}/{matrix_file}', 'a') as f:
                         print(f'{generated_test},{matrix_csv}', file = f)
@@ -168,17 +168,17 @@ class PictureGenerator:
         bpy.context.scene.render.resolution_x = x
         bpy.context.scene.render.resolution_y = y
 
-    def generate_angles_quad_train(self, n):
-        for _ in range(n):
-            yield (np.random.uniform(0, 1.5*np.pi),
-                np.random.uniform(0, 1.5*np.pi), 
-                np.random.uniform(-np.pi, 0.5*np.pi))
+    # def generate_angles_quad_train(self, n):
+    #     for _ in range(n):
+    #         yield (np.random.uniform(0, 1.5*np.pi),
+    #             np.random.uniform(0, 1.5*np.pi), 
+    #             np.random.uniform(-np.pi, 0.5*np.pi))
             
-    def generate_angles_quad_test(self, n):
-        for _ in range(n):
-            yield (np.random.uniform(0, 0.5*np.pi),
-                np.random.uniform(0.5*np.pi, np.pi), 
-                np.random.uniform(0, 0.5*np.pi))
+    # def generate_angles_quad_test(self, n):
+    #     for _ in range(n):
+    #         yield (np.random.uniform(0, 0.5*np.pi),
+    #             np.random.uniform(0.5*np.pi, np.pi), 
+    #             np.random.uniform(0, 0.5*np.pi))
 
     def generate_uniform_angles(self, n):
         for _ in range(n):
@@ -234,31 +234,62 @@ def rotation_Matrix2angles(R):
     return np.array([x, y, z])
 
 
+
 if __name__ == "__main__":
-    gen = PictureGenerator('modely/kocky_texture.fbx', (256, 256), 'textury/cool_voronoi.png')
-    # blobs = load_blobs('blobs.csv')
-    # blobs = [(np.array([1, 0, 0]), 1)]
+    # gen = PictureGenerator('modely/kocky_texture.fbx', (256, 256), 'textury/voronoi.png')
+    # gen.render_object_from_angles('cube_colorful/train', 'matice.csv', 8000)
+    # gen.render_object_from_angles('cube_colorful/val', 'matice.csv', 2000)
+    # gen.render_object_from_angles('cube_colorful/test', 'matice.csv', 1000)
+
+    # gen = PictureGenerator('modely/kocky_texture.fbx', (256, 256), 'textury/cool_voronoi.png')
+    # gen.render_object_from_angles('cube_cool/train', 'matice.csv', 8000)
+    # gen.render_object_from_angles('cube_cool/val', 'matice.csv', 2000)
+    # gen.render_object_from_angles('cube_cool/test', 'matice.csv', 1000)
+
+    # gen = PictureGenerator('modely/kocky_texture.fbx', (256, 256), 'textury/lavender.png')
+    # gen.render_object_from_angles('cube_one_color/train', 'matice.csv', 8000)
+    # gen.render_object_from_angles('cube_one_color/val', 'matice.csv', 2000)
+    # gen.render_object_from_angles('cube_one_color/test', 'matice.csv', 1000)
+
+    # gen = PictureGenerator('modely/kocky_texture.fbx', (256, 256), 'textury/cool_voronoi.png')
+    # matrices = [rotation_matrix_from_vectors(np.array([1, 0, 0]), np.array([0, -1, 0]))]
+    # gen.render_blobs_matrix('cube_big_hole/train', 'cube_big_hole/val', 'cube_big_hole/test', 'matice.csv', matrices, 8000, 2000, 1000, 50)
+
+    # gen = PictureGenerator('modely/kocky_texture.fbx', (256, 256), 'textury/cool_voronoi.png')
     # matrices = load_matrices('matrices.csv')
-    matrices = [rotation_matrix_from_vectors(np.array([1, 0, 0]), np.array([0, -1, 0]))]
-    # gen.render_object_from_angles('colorful_cube/train', 'matice.csv', 8000)
-    # gen.render_object_from_angles('colorful_cube/val', 'matice.csv', 2000)
-    # gen.render_object_from_angles('colorful_cube/test', 'matice.csv', 1000)
-
-    gen.render_blobs_matrix('cube_quad/train', 'cube_quad/val', 'cube_quad/test', 'matice.csv', matrices, 8000, 2000, 1000)
-     #4717.625327348709 - dotted
-#     # gen.paralel_rendering()
-# # check
-# #  
-#     with open('matice2.csv', 'r') as f:
-#         table = pd.read_csv(f, header=None, index_col=0)
-#         M = PictureGenerator.get_matrix_from_csv(2, table)
-#         print(M)
-#         print(np.linalg.det(M))
-#         print(M@M.T)
-            
+    # gen.render_blobs_matrix('cube_dotted/train', 'cube_dotted/val', 'cube_dotted/test', 'matice.csv', matrices, 8, 2, 1, 15)
 
 
+    import multiprocessing
 
+    def worker(seed, model, texture, train_dir, val_dir, test_dir, csv_file, train_num, val_num, test_num, angle=None, blobs=None):
+        for dir in [train_dir, val_dir, test_dir]:
+            os.makedirs(dir, exist_ok=True)
+        np.random.seed(seed)
+        print(f"random {seed}[{np.random.random()}] texture={texture}")
+        gen = PictureGenerator(model, (256, 256), texture)
+        if blobs is None:
+            gen.render_object_from_angles(train_dir, csv_file, train_num)
+            gen.render_object_from_angles(val_dir, csv_file, val_num)
+            gen.render_object_from_angles(test_dir, csv_file, test_num)
+        else:
+            gen.render_blobs_matrix(train_dir, val_dir, test_dir, csv_file, blobs, train_num, val_num, test_num, angle)
+
+    seed = 34 
+    model = 'modely/kocky_texture.fbx'
+    train_num, val_num, test_num = 8000, 2000, 1000
+    outpath = "../datasety/cube_"
+    tasks = [
+        (seed, model, 'textury/voronoi.png', outpath + 'colorful/train', outpath + 'colorful/val', outpath + 'colorful/test', 'matice.csv', train_num, val_num, test_num),
+        (seed, model, 'textury/cool_voronoi.png', outpath + 'cool/train', outpath + 'cool/val', outpath + 'cool/test', 'matice.csv', train_num, val_num, test_num),
+        (seed, model, 'textury/lavender.png', outpath + 'one_color/train', outpath + 'one_color/val', outpath + 'one_color/test', 'matice.csv', train_num, val_num, test_num),
+        (seed, model, 'textury/cool_voronoi.png', outpath + 'big_hole/train', outpath + 'big_hole/val', outpath + 'big_hole/test', 'matice.csv', train_num, val_num, test_num, 50, [rotation_matrix_from_vectors(np.array([1, 0, 0]), np.array([0, -1, 0]))]),
+        (seed, model, 'textury/cool_voronoi.png', outpath + 'dotted/train', outpath + 'dotted/val', outpath + 'dotted/test', 'matice.csv', train_num, val_num, test_num, 15, load_matrices('matrices.csv')),
+    ]
+
+    with multiprocessing.Pool() as pool:
+        pool.starmap(worker, tasks)
+    # Elapsed time: 7271.149013519287
     
 '''
 rotacna matica z blendru
