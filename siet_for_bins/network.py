@@ -54,6 +54,41 @@ class Network_GS(torch.nn.Module):
 
         return z, y
    
+    
+class Network_Axis_Angle_3D(torch.nn.Module):
+    def __init__(self, backbone='resnet18'):
+        super(Network_Axis_Angle_3D, self).__init__()
+        pretrained_backbone_model = torchvision.models.resnet18(pretrained=True)
+
+        last_feat = list(pretrained_backbone_model.children())[-1].in_features // 2
+
+        self.backbone = torch.nn.Sequential(*list(pretrained_backbone_model.children())[:-3])
+
+        self.axis = torch.nn.Linear(last_feat, 3) #staci iba toto mozno
+
+        # self.axis = torch.nn.Sequential(torch.nn.Linear(last_feat, 128),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(128, 64),
+        #                                 torch.nn.LeakyReLU(),
+        #                                 torch.nn.Linear(64, 3))
+        
+        
+    def forward(self, x):
+        # x = self.init_conv(x)
+        x = self.backbone(x)
+
+        # Global Avg Pool
+        x = torch.mean(x, -1)
+        x = torch.mean(x, -1)
+
+        # Max pooling
+        # x = torch.max(x, -1)[0]
+        # x = torch.max(x, -1)[0]
+
+        axis = self.axis(x)
+
+        return axis
+        
 
 
 class Network_Axis_Angle_4D(torch.nn.Module):
@@ -156,6 +191,7 @@ def load_model(args):
         'GS': Network_GS,
         'Axis_Angle_4D': Network_Axis_Angle_4D,
         'Stereographic': Network_Stereographic,
+        'Axis_Angle_3D': Network_Axis_Angle_3D
     }
     repr_network = which_repr[args.repr] 
     model = repr_network(backbone=args.backbone).cuda()

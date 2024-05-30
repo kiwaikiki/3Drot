@@ -21,7 +21,9 @@ def closest(test_matrices, train_matrices, path_output):
     return all_angles
 
 
-dataset = 'cube_quad'
+dataset = 'cube_cool' # NOTE: approrpiate name from this list 
+# (once the datasets in datasets folder are generated):
+# ['cube_cool', 'cube_dotted', 'cube_big_hole', 'cube_colorful', 'cube_one_color']
 path_test = f'{dataset}/test/matice.csv'
 path_train = f'{dataset}/train/matice.csv'
 table_test = np.loadtxt(path_test, delimiter=',')

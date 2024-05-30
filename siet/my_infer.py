@@ -26,16 +26,11 @@ def GS_transform(preds):
     return transform
 
 def angle_bins2rotation_Matrix(angles):
-    # print(angles)
-    # print(angles[0])
     x, y, z = torch.argmax(angles[0], axis=0), torch.argmax(angles[1], axis=0), torch.argmax(angles[2],axis=0)
-    # print(x, y, z)
     x_angle = torch.deg2rad(x)
     y_angle = torch.deg2rad(y)
     z_angle = torch.deg2rad(z)
-    # print(x_angle)
     q = kornia.geometry.conversions.quaternion_from_euler(x_angle, y_angle, z_angle)
-    # print(q)
     return kornia.geometry.conversions.quaternion_to_rotation_matrix(torch.tensor(q))
 
 def angles2Rotation_Matrix(angles):
@@ -66,9 +61,6 @@ def stereo2rotation_Matrix(preds):
     new_last = torch.tensor([new_element, last[0], last[1], last[2]]).cuda()
     new_last = new_last / norm_last
     gs = torch.cat([first, new_last])
-    # print(gs)
-    # gs = gs.reshape(-1, 2, 3).transpose(1,0)
-    # # print(gs)
     transform = GS_transform({gs[:3], gs[3:]})
     return transform
 
@@ -83,7 +75,6 @@ def infer(args):
     print(len(test_loader))
 
     np.set_printoptions(suppress=True)
-    done=0
     with torch.no_grad():
         with open(args.path_infer, 'w') as f:
             for sample in test_loader:
@@ -133,30 +124,30 @@ if __name__ == '__main__':
         'Stereographic' : stereo2rotation_Matrix,
     }
 
+    # NOTE: comment out the unwanted lines in lists below 
     reprs = [
-        # 'GS',
-        # 'Euler',
-        # 'Euler_binned',
-        # 'Quaternion',
-        # 'Axis_Angle_3D',
-        # 'Axis_Angle_4D',
-        # 'Axis_Angle_binned',
+        'GS',
+        'Euler',
+        'Euler_binned',
+        'Quaternion',
+        'Axis_Angle_3D',
+        'Axis_Angle_4D',
+        'Axis_Angle_binned',
         'Stereographic',
         # 'Matrix'
     ]
 
     losses = [
-            # 'angle_rotmat',
-            # 'elements2',
+            'angle_rotmat',
             'elements',
-            # 'angle_vectors'
+            'angle_vectors'
               ]
 
     datasets = [
-            # 'cube_cool', 
-            # 'cube_big_hole', 
-            # 'cube_dotted', 
-            # 'cube_colorful', 
+            'cube_cool', 
+            'cube_big_hole', 
+            'cube_dotted', 
+            'cube_colorful', 
             'cube_one_color'
             ]
 

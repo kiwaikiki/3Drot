@@ -135,39 +135,29 @@ if __name__ == '__main__':
         'Stereographic': Stereographic_Loss_Calculator
     }
 
-
-    # args.dataset = 'cube_cool'
-    # args.path_pics = f'datasets/{args.dataset}'
-    # args.repr = 'GS'
-    # args.loss_type = 'elements'
-    # args.loss_calculator = loss_calcs[args.repr]
-    # args.path_checkpoints = os.path.join('siet', 'training_data', args.dataset, 'checkpoints', args.repr, args.loss_type)
-    # # args.resume = 80
-    # train(args)
-
+    # NOTE: comment out the unwanted lines in lists below
     reprs = [
-        # 'GS',
-        # 'Euler',
-        # 'Euler_binned',
-        # 'Quaternion',
-        # 'Axis_Angle_3D',
-        # 'Axis_Angle_4D',
-        # 'Axis_Angle_binned',
+        'GS',
+        'Euler',
+        'Euler_binned',
+        'Quaternion',
+        'Axis_Angle_3D',
+        'Axis_Angle_4D',
+        'Axis_Angle_binned',
         'Stereographic',
         # 'Matrix'
     ]
     losses = [
-            # 'angle_rotmat',
+            'angle_rotmat',
             'elements',
-            # 'angle_vectors'
-            # 'elements2'
+            'angle_vectors'
               ]
 
     datasets = [
-            # 'cube_cool', 
-            # 'cube_big_hole', 
-            # 'cube_dotted', 
-            # 'cube_colorful', 
+            'cube_cool', 
+            'cube_big_hole', 
+            'cube_dotted', 
+            'cube_colorful', 
             'cube_one_color'
             ]
 
@@ -184,7 +174,7 @@ if __name__ == '__main__':
                 args.path_pics = f'datasets/{dset}'
                 args.dataset = dset
                 args.repr = r
-                # args.resume = 50
+                # args.resume = 50 # NOTE: uncomment if you want to resume training from a specific checkpoint
                 args.loss_type = l
                 args.loss_calculator = loss_calcs[args.repr] 
                 try:

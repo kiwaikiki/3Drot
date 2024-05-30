@@ -197,6 +197,11 @@ class Loss_Calculator:
         print("Epoch {}/{}".format(e, epochs))
         print("mean - val loss: {}".format(np.mean(self.val_losses)))
         print("median - val loss: {}".format(np.median(self.val_losses)))
+
+    def is_best(self):
+        if min(self.val_loss_all) == self.val_loss_all[-1]:
+            return True
+        return False
         
 
 class GS_Loss_Calculator(Loss_Calculator):
@@ -215,7 +220,7 @@ class GS_Loss_Calculator(Loss_Calculator):
                         'elements': (self.calculate_elements_loss,
                                     self.calculate_val_elements_loss)
         }
-        self.folder = f'siet_for_bins/training_data/results/GS/{args.loss_type}/'
+        self.folder = f'/home/kocurvik/bcpravdova/siet_for_bins/training_data_synth/results/GS/{args.loss_type}/'
         self.train_file = self.folder + 'train_err'
         self.val_file = self.folder + 'val_err'
       
@@ -274,7 +279,34 @@ class GS_Loss_Calculator(Loss_Calculator):
         self.val_losses_z.append(loss_z.detach().item())
         self.val_losses_y.append(loss_y.detach().item())
 
-   
+
+    # def calculate_angle_vectors_train_loss(self, preds, transform, translation): 
+    #     pred_z, pred_y, preds_t = preds
+    #     loss_z = torch.mean(get_angles(pred_z, transform[:, :3, 2].cuda()))
+    #     loss_y = torch.mean(get_angles(pred_y, transform[:, :3, 1].cuda()))
+    #     loss_t = self.l2loss_f(preds_t, translation.float().cuda())
+    #     loss = loss_z + loss_y + loss_t
+
+    #     self.loss_z_running = 0.9 * self.loss_z_running + 0.1 * loss_z
+    #     self.loss_y_running = 0.9 * self.loss_y_running + 0.1 * loss_y
+    #     self.loss_running = 0.9 * self.loss_running + 0.1 * loss
+
+    #     self.print_running_loss()
+    #     return loss
+
+    # def calculate_angle_vectors_val_loss(self, preds, transform, translation):
+    #     pred_z, pred_y, preds_t = preds
+    #     loss_z = torch.mean(get_angles(pred_z, transform[:, :3, 2].cuda()))
+    #     loss_y = torch.mean(get_angles(pred_y, transform[:, :3, 1].cuda()))
+    #     loss_t = self.l2loss_f(preds_t, translation.float().cuda())
+    #     loss = loss_z + loss_y + loss_t
+
+    #     self.val_losses.append(loss.detach().item())
+    #     self.val_losses_z.append(loss_z.detach().item())
+    #     self.val_losses_y.append(loss_y.detach().item())
+        
+    
+
     def print_running_loss(self):
         print("Running loss: {}, z loss: {}, y loss: {}"
             .format(self.loss_running.item(),  self.loss_z_running.item(), self.loss_y_running.item()))
@@ -286,6 +318,75 @@ class GS_Loss_Calculator(Loss_Calculator):
                 .format(np.mean(self.val_losses), np.mean(self.val_losses_z), np.mean(self.val_losses_y)))
         print("medians - \t val loss: {} \t z loss: {} \t y loss: {} "
                 .format(np.median(self.val_losses), np.median(self.val_losses_z), np.median(self.val_losses_y)))
+
+
+   
+
+
+class Axis_angle_3D_Loss_Calculator(Loss_Calculator):
+    def __init__(self, args):
+        super().__init__(args)
+
+        self.function_dict = {'angle_rotmat': (self.calculate_angle_rotmat_loss, 
+                                    self.calculate_val_angle_rotmat_loss),
+                            'angle_vectors': (self.calculate_angle_vectors_loss,
+                                    self.calculate_angle_vectors_val_loss),
+                            'elements': (self.calculate_elements_loss,
+                                    self.calculate_val_elements_loss)
+
+        }
+
+        self.folder = f'/home/kocurvik/bcpravdova/siet_for_bins/training_data_synth/results/Axis_Angle_3D/{args.loss_type}/'
+        self.train_file = self.folder + 'train_err'
+        self.val_file = self.folder + 'val_err'
+    
+    def calculate_angle_rotmat_loss(self, pred, gt):
+        pred_R = kornia.geometry.conversions.axis_angle_to_rotation_matrix(pred)
+        true_transfrm = gt.float()
+
+        loss = calculate_eRE(true_transfrm, pred_R.cuda()).cuda()
+        self.loss_running = 0.9 * self.loss_running + 0.1 * loss
+
+        print(f'Running Loss: {self.loss_running.item()}')
+        return loss
+    
+    def calculate_val_angle_rotmat_loss(self, pred, gt):
+        self.val_losses.append(self.calculate_angle_rotmat_loss(pred, gt).detach().item())
+
+    def calculate_angle_vectors_loss(self, preds, true_transform):
+        gt_axis = kornia.geometry.conversions.rotation_matrix_to_axis_angle(true_transform)
+        gt_angle = torch.linalg.norm(gt_axis, axis=1)
+
+        preds_angle = torch.linalg.norm(preds, axis=1)
+
+        loss_vec = torch.mean(get_angles(preds, gt_axis.cuda()))
+        loss_angle = self.l2loss_f(preds_angle, gt_angle.float().cuda())
+
+        loss = loss_vec + loss_angle
+
+        self.loss_running = 0.9 * self.loss_running + 0.1 * loss
+
+        print(f'Running Loss: {self.loss_running.item()}')
+        return loss
+    
+    def calculate_angle_vectors_val_loss(self, preds, true_transform):
+        loss = self.calculate_angle_vectors_loss(preds, true_transform)
+        self.val_losses.append(loss.detach().item())
+
+    def calculate_elements_loss(self, preds, true_transform):
+        gt_axis = torch.stack([kornia.geometry.conversions.rotation_matrix_to_axis_angle(true_transform[i]) for i in range(len(true_transform))])
+        loss = self.l2loss_f(preds, gt_axis.float().cuda())
+        # loss = torch.mean(torch.abs(preds - gt_axis)).cuda()
+
+        self.loss_running = 0.9 * self.loss_running + 0.1 * loss
+
+        print(f'Running Loss: {self.loss_running.item()}')
+        return loss
+    
+    def calculate_val_elements_loss(self, preds, true_transform):
+        loss = self.calculate_elements_loss(preds, true_transform)
+        self.val_losses.append(loss.detach().item())
+
 
 
 class Axis_angle_4D_Loss_Calculator(Loss_Calculator):
@@ -300,7 +401,7 @@ class Axis_angle_4D_Loss_Calculator(Loss_Calculator):
                                     self.calculate_val_angle_vectors_loss)
                             }
 
-        self.folder = f'siet_for_bins/training_data/results/Axis_Angle_4D/{args.loss_type}/'
+        self.folder = f'/home/kocurvik/bcpravdova/siet_for_bins/training_data_synth/results/Axis_Angle_4D/{args.loss_type}/'
         self.train_file = self.folder + 'train_err'
         self.val_file = self.folder + 'val_err'
 
@@ -366,7 +467,7 @@ class Stereographic_Loss_Calculator(Loss_Calculator):
                                     self.calculate_val_angle_vectors_loss),
         }
 
-        self.folder = f'siet_for_bins/training_data/results/Stereographic/{args.loss_type}/'
+        self.folder = f'/home/kocurvik/bcpravdova/siet_for_bins/training_data_synth/results/Stereographic/{args.loss_type}/'
         self.train_file = self.folder + 'train_err'
         self.val_file = self.folder + 'val_err'
 

@@ -159,7 +159,6 @@ class PictureGenerator:
 
     def import_object(self, ile_path):
         print(bpy.ops.import_scene.fbx(filepath='modely/kocky_texture.fbx'))
-        # bpy.ops.import_scene.obj(filepath=file_path)
         bpy.ops.object.select_all(action='SELECT')
         obj = bpy.context.selected_objects[-1] # 0 is camera, 1 is light
         return obj
@@ -167,18 +166,6 @@ class PictureGenerator:
     def set_rendering_settings(self, x, y):
         bpy.context.scene.render.resolution_x = x
         bpy.context.scene.render.resolution_y = y
-
-    # def generate_angles_quad_train(self, n):
-    #     for _ in range(n):
-    #         yield (np.random.uniform(0, 1.5*np.pi),
-    #             np.random.uniform(0, 1.5*np.pi), 
-    #             np.random.uniform(-np.pi, 0.5*np.pi))
-            
-    # def generate_angles_quad_test(self, n):
-    #     for _ in range(n):
-    #         yield (np.random.uniform(0, 0.5*np.pi),
-    #             np.random.uniform(0.5*np.pi, np.pi), 
-    #             np.random.uniform(0, 0.5*np.pi))
 
     def generate_uniform_angles(self, n):
         for _ in range(n):
@@ -193,7 +180,6 @@ class PictureGenerator:
         with mp.Pool(10) as p:
             p.map(help_paralel, zip(range(n), [self.obj.copy() for _ in range(n)]))
 
-# def is_in_blob_matrix()
 
 def help_paralel(args):
     obj_id, obj = args
@@ -290,13 +276,3 @@ if __name__ == "__main__":
     with multiprocessing.Pool() as pool:
         pool.starmap(worker, tasks)
     # Elapsed time: 7271.149013519287
-    
-'''
-rotacna matica z blendru
-optimalizacia
-resnet 18
-pytorch nacitat a spustit
-
-cv4 
-custom torch module
-'''

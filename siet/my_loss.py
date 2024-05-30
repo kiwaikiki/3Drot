@@ -41,10 +41,7 @@ def calculate_eRE(R_gt, R_est):
     '''
     Calculate the angle between two rotation matrices R_gt and R_est
     ''' 
-    # angles = np..apply_along_axis(lambda Rt, Re: rotation_angle(Rt.T @ Re), 1, R_gt, R_est)
-    angls = [rotation_angle(torch.matmul(R_gt[i].T, R_est[i])) for i in range(len(R_gt))]
     angles = torch.stack([rotation_angle(torch.matmul(R_gt[i].T, R_est[i])) for i in range(len(R_gt))])
-    # print(angles)
     return torch.mean(angles)
 
 def angles2Rotation_Matrix(angles):
@@ -87,12 +84,8 @@ def rotation_Matrix2angle_bins(R, bins=360):
     Convert a rotation matrix to angle bins
     '''
     x_angle, y_angle, z_angle = rotation_Matrix2angles(R)
-    # print(x_angle, y_angle, z_angle)
     x = torch.zeros(bins)
     x[int(torch.rad2deg(x_angle))] = 1
-    # print(torch.rad2deg(x_angle))
-    # print(int(torch.rad2deg(x_angle)))
-    # print(x)
 
     y = torch.zeros(bins)
     y[int(torch.rad2deg(y_angle))] = 1
@@ -104,16 +97,11 @@ def angle_bins2rotation_Matrix(angles):
     '''
     Convert angle bins to a rotation matrix. Use the wighted sum of the angle values based on bins.
     '''
-    
     values = torch.arange(360).float().cuda()
-    # print(torch.softmax(angles[:, 0], dim=1) * values)
-    # print(torch.sum(torch.softmax(angles[:, 0], dim=1) * values, dim=1))
     x = torch.deg2rad(torch.sum(torch.softmax(angles[:, 0], dim=1) * values, dim=1))
     y = torch.deg2rad(torch.sum(torch.softmax(angles[:, 1], dim=1) * values, dim=1))
     z = torch.deg2rad(torch.sum(torch.softmax(angles[:, 2], dim=1) * values, dim=1))
-    # print(x, y, z)
     q = kornia.geometry.conversions.quaternion_from_euler(x, y, z)
-    # print(q)
     return kornia.geometry.conversions.quaternion_to_rotation_matrix(torch.stack(q).T)
 
 def GS_transform(preds):
@@ -314,13 +302,11 @@ class Euler_Loss_Calculator(Loss_Calculator):
            
     
     def calculate_elements_loss(self, preds, true_transform):
-        # gt_angles = torch.stack([rotation_Matrix2angles(true_transform[i]) for i in range(len(true_transform))])
         gt_angles = kornia.geometry.conversions.rotation_matrix_to_quaternion(true_transform)
         gt_angles = kornia.geometry.conversions.euler_from_quaternion(gt_angles.T[0], gt_angles.T[1], gt_angles.T[2], gt_angles.T[3])
         gt_angles = torch.stack(gt_angles).T
 
         loss = self.l2loss_f(preds, gt_angles.float().cuda())
-        # loss = torch.mean(torch.abs(preds - gt_angles)).cuda()
 
         self.loss_running = 0.9 * self.loss_running + 0.1 * loss
 
@@ -643,7 +629,6 @@ class Matrix_Loss_Calculator(Loss_Calculator):
 
     def calculate_elements_loss(self, preds, true_transform):
         loss = self.l2loss_f(preds, true_transform.float().cuda())
-        # loss = torch.mean(torch.abs(preds - true_transform)).cuda()
 
         self.loss_running = 0.9 * self.loss_running + 0.1 * loss
 

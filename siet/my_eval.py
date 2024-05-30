@@ -5,7 +5,6 @@ import os
 from prettytable import PrettyTable
 
 from my_loss import angles2Rotation_Matrix
-# import PrettyTable
 
 def angle(x, y):
     x = x.ravel()
@@ -29,7 +28,7 @@ def evaluate(truth, pred, path_res):
     counter_better = 0
     counter_worse = 0
     with open(path_res, 'w') as f:
-        for row in pred_matrices
+        for row in pred_matrices:
             index = int(row[0])
             # print(f'Index: {index}')
             R_gt = true_matrices[index][1:].reshape(3, 3)
@@ -45,17 +44,6 @@ def evaluate(truth, pred, path_res):
                 counter_better += 1
 
             print(f'{index},{err}', file=f)
-
-    # print(eRE_list)
-    # print(len(eRE_list))
-    # print(f'better: {counter_better}')
-    # print(f'worse: {counter_worse}')
-    # print(f'Mean eRE: {np.mean(eRE_list)}')
-    # print(f'Median eRE: {np.median(eRE_list)}')
-    # print(f'Max eRE: {np.max(eRE_list)}')
-    # print(f'Min eRE: {np.min(eRE_list)}')
-    # print(f'Std eRE: {np.std(eRE_list)}')
-    # print(f'90th percentile eRE: {np.percentile(eRE_list, 90)}')
 
     return eRE_list
 
@@ -81,29 +69,30 @@ if __name__ == '__main__':
     """
     Example usage: python evaluate.py path/to/dataset_with_predictions
     """
+    # NOTE: comment out the lines you do not want to evaluate
+
     reprs = [
-        # 'GS',
-        # 'Euler',
-        # 'Euler_binned',
-        # 'Quaternion',
-        # 'Axis_Angle_3D',
-        # 'Axis_Angle_4D',
-        # 'Axis_Angle_binned',
+        'GS',
+        'Euler',
+        'Euler_binned',
+        'Quaternion',
+        'Axis_Angle_3D',
+        'Axis_Angle_4D',
+        'Axis_Angle_binned',
         'Stereographic',
         # 'Matrix'
     ]
     losses = [
-            # 'angle_rotmat',
-            # 'elements2',
+            'angle_rotmat',
             'elements',
-            # 'angle_vectors'
+            'angle_vectors'
               ]
 
     datasets = [
-            # 'cube_cool', 
-            # 'cube_big_hole', 
-            # 'cube_dotted', 
-            # 'cube_colorful', 
+            'cube_cool', 
+            'cube_big_hole', 
+            'cube_dotted', 
+            'cube_colorful', 
             'cube_one_color'
             ]
 

@@ -23,7 +23,6 @@ def load_rgb(id_pic : int, path):
         rgb = rgb / 256
         return rgb
 
-
 def load_matrices(path):
         table = np.loadtxt(path, delimiter = ',')
         
@@ -39,7 +38,6 @@ def display_picture(pic):
     plt.imshow(pic[:,:,::-1])
     plt.savefig('test_nacitane.png')
 
-
 def isRotationMatrix(R) :
     Rt = np.transpose(R)
     shouldBeIdentity = np.dot(Rt, R)
@@ -47,9 +45,7 @@ def isRotationMatrix(R) :
     n = np.linalg.norm(I - shouldBeIdentity)
     return n < 1e-6
  
-# Calculates rotation matrix to euler angles
-# The result is the same as MATLAB except the order
-# of the euler angles ( x and z are swapped ).
+ 
 def rotationMatrixToEulerAngles(R) :
  
     assert(isRotationMatrix(R))

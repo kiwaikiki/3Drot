@@ -8,7 +8,8 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from matplotlib import pyplot as plt
 from scipy.spatial.transform import Rotation
-
+#  enable OPENCV_IO_ENABLE_OPENEXR
+os.environ['OPENCV_IO_ENABLE_OPENEXR'] = '1'
 
 def get_canonical_transform(transform):
     """
@@ -48,7 +49,7 @@ class Dataset(Dataset):
         with open(path, 'r') as f:
             self.entries = json.load(f)
 
-        self.entries = [entry for entry in self.entries if entry['dir'] == 'dataset0']
+        # self.entries = [entry for entry in self.entries if entry['dir'] not in ['TestSynth', 'dataset0', 'dataset1', 'dataset2', 'dataset3', 'dataset4']]
 
         if 'train' not in path and 'val' not in path:
             if self.split == 'train':
@@ -170,19 +171,34 @@ if __name__ == '__main__':
     # parser.add_argument('json', help='Path to dataset json file.')
     args = parser.parse_args()
 
-    json_path = 'bins/VISIGRAPP_TRAIN/dataset.json'
+    json_path = 'bins/VISIGRAPP_TEST/dataset.json'
 
-    dataset = Dataset(json_path, 'train', 258, 193, preload=False, noise_sigma=0.0, random_rot=True)
-    data_loader = DataLoader(dataset, batch_size=4, shuffle=True, num_workers=1)
+    dataset = Dataset(json_path, 'test', 258, 193, preload=False, noise_sigma=0.0, random_rot=True)
+    data_loader = DataLoader(dataset, batch_size=4, shuffle=False, num_workers=1)
 
-    for item in data_loader:
-        print(item['xyz'].size())
-        xyz = item['xyz'][0].cpu().detach().numpy()
+    with open('siet_for_bins/test_synth_matrices.csv', 'w') as f:   
+        for item in data_loader:
+            # xyz = item['xyz'].cpu().detach().numpy()
+            gt_transforms = item['bin_transform'].cpu().detach().numpy()
+            textnames = item['txt_path']
+            for i in range(len(gt_transforms)):
+                # print(f'{textnames[i]},{",".join(map(str, gt_transforms[i].ravel()))}', file=f)
+                print(",".join(map(str, gt_transforms[i][:3,:3].ravel())), file=f)
 
-        print(np.mean(xyz))
 
-        #fig = plt.figure()
-        #ax = fig.add_subplot(projection='3d')
-        #ax.scatter(xyz[0].ravel(), xyz[1].ravel(), xyz[2].ravel(), marker='o')
+            #fig = plt.figure()
+            #ax = fig.add_subplot(projection='3d')
+            #ax.scatter(xyz[0].ravel(), xyz[1].ravel(), xyz[2].ravel(), marker='o')
 
-        #plt.show()
+            #plt.show()
+
+
+
+
+# train:384
+# val 97
+
+# train + synth : 672
+
+# test: 39
+# test + synth: 49

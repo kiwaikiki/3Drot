@@ -1,3 +1,8 @@
+'''
+This module only displays the distributions.
+'''
+
+
 from matplotlib import pyplot as plt
 import plotly.express as px
 import plotly.graph_objects as go
@@ -5,26 +10,6 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import matplotlib.patches as mpatches
-
-'''
-potrebujem:
-bud
-1)
-- pre kazdy bod vo vygenerovanom datasete najst ci patri do nejakeho blobu alebo nie a olabelovat + najst vzdialenost k najblizsiemu boduv datasete
-
-2)
-- vygenerovat dataset s d kruhmi
-- vygenerujem bod, checknem ci je v nejakom kruhu, zadlim na test / train
-- potom pre kazdy v testovacom prejdem vsetky v trenovaciom a 
-    - 
-'''
-# def angle_between_rotations(R1, R2):
-#     R = np.dot(R1, np.transpose(R2))
-#     trace = np.trace(R)
-#     trace = max(-1.0, min(trace, 3.0))
-#     cos_angle = (trace - 1) / 2.0
-#     angle = np.arccos(cos_angle)
-#     return np.rad2deg(angle)
 
 
 def rotation_angle(R):
@@ -201,7 +186,6 @@ def solid_sphere_w_matrices(matrices, angle):
             z = Z[i, j]
             matrix_to_point = rotation_matrix_from_vectors(np.array([1, 0, 0]), np.array([x, y, z]))
             heatmap[i, j] = is_in_blob_matrix(matrix_to_point, matrices, angle)
-    # heatmap = heatmap / np.amax( heatmap )
 
     ax.plot_surface( X, Y, Z, cstride=1, rstride=1, facecolors=cm.cool(heatmap), alpha=0.15)
 
@@ -218,13 +202,11 @@ def solid_sphere_w_matrices(matrices, angle):
 def is_in_blob_matrix(matrix, matrices, angle):
     for mat in matrices:
         rot_ang = rotation_angle(mat.T @ matrix)
-        # print("rotangle", rot_ang, "angle", angle)
         if rot_ang < angle:
             vec1 = np.array([1, 0, 0])
             vec2 = np.array([1, 0, 0])
             vec1 = mat @ vec1
             vec2 = matrix @ vec2
-            # print(geodesic_distance(vec1, vec2))
             return True
     return False
 
@@ -298,8 +280,6 @@ def sphere_by_set(path):
         R = np.array(x[1:]).reshape(3, 3)
         return R @ vec 
     
-    ax.scatter(0.66933941, 0.66848188, 0.3338211, c='black', s=50, zorder=5)
-    
     table_test = np.loadtxt(f'{path}/test/matice.csv', delimiter = ',')
     matrices = np.apply_along_axis(f, 1, table_test)
     ax.scatter(matrices[:, 0], matrices[:, 1], matrices[:, 2], c=plt.cm.cool(1.0), label='test set', alpha=1, zorder=2)
@@ -341,36 +321,7 @@ if __name__ == '__main__':
     # matrices = [rotation_matrix_from_vectors(np.array([1, 0, 0]), np.array([0, -1, 0]))]
     matrices = load_matrices('matrices.csv')
     # check_matrices(matrices)
-    # blobs = load_blobs('blobs.csv')
-    # blobs = [(np.array([1, 0, 0]), 1)]
-    # blobs = golden_spiral(20, 0.2)
-    # save_blobs(blobs, 'blobs.csv')
-    # scatter_sphere_w_blobs(blobs)
-    # solid_sphere_w_blobs(blo////bs)
     # scatter_sphere_w_matrices(path, matrices)
     solid_sphere_w_matrices(matrices,15)
 
 
-    # roatate around x axis 90
-    # R_1 = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
-    # # rotate around y axis 90
-    # R_2 = np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]])
-
-    # print(rotation_angle(R_1))
-    # print(rotation_angle(R_2))
-    # print(rotation_angle(R_1.T @ R_2))
-    
-    '''
-    momentalne bloby funguju:
-    - vygenerujem nahodny bod na guli ako stred plus nahodny polomer
-    - zisitm pre kazdu maticu kam zrotuje 1,0,0 vektor
-    - hladam ci vzdialenost stredu blobu a zrotovaneho vektoru na povrchu gule je mensia ako polomer
-
-    da sa:
-    - vygenerovat nahodnu rotacnu maticu ako stred blobu plus nahodny uhol ako polomer
-    - potom hladam uhol medzi maticami a zistujem ci je mensi ako uhol blobu
-    - ale ked to budem plotovat aj tak budem rotovat 1,0,0 vektor 
-
-    ....well actually mozno neda
-    '''
-W
