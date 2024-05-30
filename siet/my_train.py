@@ -178,9 +178,9 @@ if __name__ == '__main__':
             for l in losses:
                 
                 args.path_checkpoints = os.path.join('siet', 'training_data', dset, 'checkpoints', r, l)
-                # if os.path.exists(f'{args.path_checkpoints}/100.pth'):
-                #     print('Already done ', args.path_checkpoints)
-                #     continue
+                if os.path.exists(f'{args.path_checkpoints}/100.pth'):
+                    print('Already done ', args.path_checkpoints)
+                    continue
                 args.path_pics = f'datasets/{dset}'
                 args.dataset = dset
                 args.repr = r

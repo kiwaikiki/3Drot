@@ -29,9 +29,7 @@ def evaluate(truth, pred, path_res):
     counter_better = 0
     counter_worse = 0
     with open(path_res, 'w') as f:
-        for row in pred_matrices:
-            # print(row)
-            # print(true_matrices[int(row[0])])
+        for row in pred_matrices
             index = int(row[0])
             # print(f'Index: {index}')
             R_gt = true_matrices[index][1:].reshape(3, 3)

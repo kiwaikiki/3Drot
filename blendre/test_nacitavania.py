@@ -47,9 +47,7 @@ def isRotationMatrix(R) :
     n = np.linalg.norm(I - shouldBeIdentity)
     return n < 1e-6
  
-# Calculates rotation matrix to euler angles
-# The result is the same as MATLAB except the order
-# of the euler angles ( x and z are swapped ).
+
 def rotationMatrixToEulerAngles(R) :
  
     assert(isRotationMatrix(R))

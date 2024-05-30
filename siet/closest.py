@@ -11,6 +11,10 @@ def help2matrix(x):
 
 
 def closest(test_matrices, train_matrices, path_output):
+    '''
+    Find the closest matrix in train_matrices for each matrix in test_matrices and record the index and the angle in path_output
+    
+    '''
     all_angles = []
     with open(path_output, 'w') as f:
         for i, test_matrix in enumerate(test_matrices):

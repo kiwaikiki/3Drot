@@ -137,7 +137,7 @@ if __name__ == "__main__":
         'Quaternion',
         'Axis_Angle_3D',
         'Axis_Angle_4D',
-        # 'Axis_Angle_binned',
+        'Axis_Angle_binned',
         'Stereographic',
         'GS',
     ]
@@ -210,35 +210,61 @@ if __name__ == "__main__":
     # # closest_vs_errors('cube_cool', paths, cmap)
     # for dataset, m in paths_n_names:
     #     closest_vs_errors(dataset, zaujimave_paths, m, cmap)
-    fig, ax = plt.subplots(1, figsize=(8,5))
-    loss = 'angle_rotmat'
-    for i, repre in enumerate(reprs):
-        path = os.path.join('siet', 'training_data', 'cube_colorful', 'results', repre, loss, 'train_err.out')
-        if not os.path.exists(path):
-            print(f'Path {path} does not exist')
-            continue
-        with open(path, 'r') as f:
-            train_lines = f.readlines()
-            train_lines = [float(line.strip()) for line in train_lines]
+    # fig, ax = plt.subplots(1, figsize=(8,5))
+    # loss = 'angle_rotmat'
+    # for i, repre in enumerate(reprs):
+    #     path = os.path.join('siet', 'training_data', 'cube_colorful', 'results', repre, loss, 'train_err.out')
+    #     if not os.path.exists(path):
+    #         print(f'Path {path} does not exist')
+    #         continue
+    #     with open(path, 'r') as f:
+    #         train_lines = f.readlines()
+    #         train_lines = [float(line.strip()) for line in train_lines]
         
-        path = os.path.join('siet', 'training_data', 'cube_colorful', 'results', repre, loss, 'val_err.out')
-        if not os.path.exists(path):
-            print(f'Path {path} does not exist')
-            continue
+    #     path = os.path.join('siet', 'training_data', 'cube_colorful', 'results', repre, loss, 'val_err.out')
+    #     if not os.path.exists(path):
+    #         print(f'Path {path} does not exist')
+    #         continue
 
-        with open(path, 'r') as f:
-            val_lines = f.readlines()
-            val_lines = [float(line.strip()) for line in val_lines]
-        ax.plot(train_lines, '--', label=f'{repre} train', color = colors[i], alpha=0.7)
-        ax.plot(val_lines,  label=f'{repre} val', color = colors[i], alpha=1)
-    ax.set_title(f'angle_rotmat')
+    #     with open(path, 'r') as f:
+    #         val_lines = f.readlines()
+    #         val_lines = [float(line.strip()) for line in val_lines]
+    #     ax.plot(train_lines, '--', label=f'{repre} train', color = colors[i], alpha=0.7)
+    #     ax.plot(val_lines,  label=f'{repre} val', color = colors[i], alpha=1)
+    # ax.set_title(f'angle_rotmat')
     # (lines, labels) = plt.gca().get_legend_handles_labels()
     # leg1 = plt.legend(lines[:1], labels[:1], bbox_to_anchor=(0,0,0.8,1), loc=1)
     # leg2 = plt.legend(lines[1:], labels[1:], bbox_to_anchor=(0,0,1,1), loc=1)
     # gca().add_artist(leg1)
-    plt.legend(ncol=2)
-    ax.set_xlabel('Epocha')
-    ax.set_ylabel('Chyba')
-    ax.set_ylim(0, 30)
-    plt.savefig(f'images/Losses_angle_rotmat.pdf', bbox_inches='tight')
-    plt.show()
+    # plt.legend(ncol=2)
+    # ax.set_xlabel('Epocha')
+    # ax.set_ylabel('Chyba')
+    # ax.set_ylim(0, 30)
+    # plt.savefig(f'images/Losses_angle_rotmat.pdf', bbox_inches='tight')
+    # plt.show()
+
+
+# create me boxplots from errors in files err_by_index.csv for each dataset with one box for each combination repr and lossf
+    for name, dataset in zip(['Náhodný dataset', 'Dataset s veľkou dierou', "Dataset s veľa dierami", "Pestrofarebný dataset", "Jednofarebný dataset"], datasets):
+        fig, ax = plt.subplots(1, figsize=(8,5))
+        errors = []
+        labels = []
+        for repre in reprs:
+            for lossf in losses:
+                path = os.path.join('siet', 'training_data', dataset, 'results', repre, lossf, 'err_by_index.csv')
+                if not os.path.exists(path):
+                    print(f'Path {path} does not exist')
+                    continue
+                errs = np.loadtxt(path, delimiter=',')[:, 1]
+                errors.append(errs)
+                labels.append(f'{repre} {lossf}')
+        ax.boxplot(errors, labels=labels)
+        ax.set_title(name)
+        ax.set_ylabel('Chyba angle_rotmat [°]')
+        ax.set_xlabel('Metóda')
+        # rotate x labels
+        plt.xticks(rotation=45, ha='right')
+        # y logaritmicke osi
+        ax.set_yscale('log')
+        plt.savefig(f'images/boxplot_{dataset}.pdf', bbox_inches='tight')
+        plt.show()

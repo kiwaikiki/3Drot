@@ -8,8 +8,14 @@ datasets/cube_big_hole/
 datasets/cube_dotted/
 siet/training_data/
 siet/training_data_bak/
+siet/checkpoints/
+siet/results/
+siet/inferences/
 cube_big_hole/
 cube_cool/
 cube_colorful/
 cube_dotted/
 cube_one_color/
+bins/
+images/
+siet_for_bins/training_data*
